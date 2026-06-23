@@ -52,11 +52,11 @@ export default function ForgotPasswordPage() {
           </span>
         </Button>
 
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-text-secondary">
           Remember your password?{" "}
           <Link
             href="/login"
-            className="font-bold text-emerald-600 transition hover:text-emerald-700 hover:underline"
+            className="font-bold text-primary-blue transition hover:text-primary-blue-light hover:underline"
           >
             Sign in
           </Link>

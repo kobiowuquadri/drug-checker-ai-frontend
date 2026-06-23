@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Sidebar from "@/app/components/dashboard/Sidebar";
-import { Menu, ShieldCheck } from "lucide-react";
+import Logo from "@/app/components/ui/Logo";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardLayout({
@@ -13,24 +14,19 @@ export default function DashboardLayout({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-bg-app transition-colors duration-300">
       {/* Sidebar Component with mobile drawer props */}
       <Sidebar isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
 
       {/* Main content wrapper */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Mobile top navigation bar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/60 bg-white px-6 md:hidden">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="rounded-lg bg-emerald-500/10 p-1.5 text-emerald-600">
-              <ShieldCheck className="h-4.5 w-4.5" />
-            </div>
-            <span className="font-extrabold text-sm text-slate-800">Drug Checker AI</span>
-          </Link>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border-app bg-card-app px-6 md:hidden dark:border-slate-800">
+          <Logo href="/dashboard" showTagline={false} />
 
           <button
             onClick={() => setIsMobileOpen(true)}
-            className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition cursor-pointer"
+            className="rounded-xl border border-border-app p-2 text-text-secondary hover:bg-surface-app hover:text-text-primary transition cursor-pointer dark:border-slate-800"
             aria-label="Open Menu"
           >
             <Menu className="h-5 w-5" />

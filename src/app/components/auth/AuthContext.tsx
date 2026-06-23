@@ -201,10 +201,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isDashboardRoute = pathname.startsWith("/dashboard");
   if (isLoading && isDashboardRoute) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-bg-app transition-colors">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <p className="text-sm font-semibold text-slate-500">Verifying session...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-blue border-t-transparent" />
+          <p className="text-sm font-semibold text-text-secondary">Verifying session...</p>
         </div>
       </div>
     );

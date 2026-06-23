@@ -41,23 +41,23 @@ export default function ReportPage() {
       </div>
 
       {/* Clinical style sheet container */}
-      <Card className="border border-slate-200 bg-white p-8 md:p-12 shadow-xl shadow-slate-100/50 print:border-none print:shadow-none space-y-8">
+      <Card className="border border-border-app bg-card-app p-8 md:p-12 shadow-xl shadow-slate-100/50 dark:border-slate-800 dark:shadow-none print:border-none print:shadow-none space-y-8 transition-colors">
         {/* Report metadata heading */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-border-app dark:border-slate-850 pb-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-600 p-2.5 text-white">
+            <div className="rounded-xl bg-primary-blue p-2.5 text-white">
               <FileText className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-slate-800">Drug Checker AI</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clinical Safety Registry</p>
+              <h2 className="text-lg font-extrabold text-text-primary">Drug Checker AI</h2>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Clinical Safety Registry</p>
             </div>
           </div>
 
           <div className="text-left sm:text-right space-y-1">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Report Identifier</p>
-            <p className="text-sm font-bold text-slate-800">REP-2026-9801</p>
-            <p className="flex sm:justify-end items-center gap-1 text-xs font-medium text-slate-500">
+            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">Report Identifier</p>
+            <p className="text-sm font-bold text-text-primary">REP-2026-9801</p>
+            <p className="flex sm:justify-end items-center gap-1 text-xs font-medium text-text-muted">
               <Calendar className="h-3.5 w-3.5" />
               Generated: June 15, 2026
             </p>
@@ -65,27 +65,27 @@ export default function ReportPage() {
         </div>
 
         {/* Drug Combination block */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50/50 p-6 border border-slate-100 rounded-3xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-surface-app/50 p-6 border border-border-app dark:border-slate-800 rounded-3xl">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assessed Medication Pair</p>
-            <h3 className="mt-1 text-2xl font-extrabold text-slate-800">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Assessed Medication Pair</p>
+            <h3 className="mt-1 text-2xl font-extrabold text-text-primary">
               {report.drugs.join(" + ")}
             </h3>
           </div>
-          <Badge variant={report.severity}>{report.severity} severity</Badge>
+          <Badge variant={report.severity as any}>{report.severity} severity</Badge>
         </div>
 
         {/* Main Details Grid */}
         <div className="grid gap-8 sm:grid-cols-2">
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Assessment Summary</h4>
-            <p className="text-sm font-bold text-slate-800 leading-relaxed">{report.summary}</p>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted">Assessment Summary</h4>
+            <p className="text-sm font-bold text-text-primary leading-relaxed">{report.summary}</p>
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Clinical Data Integrity</h4>
-            <p className="text-sm font-semibold text-slate-600 flex items-center gap-1.5 leading-relaxed">
-              <Award className="h-4.5 w-4.5 text-emerald-600" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted">Clinical Data Integrity</h4>
+            <p className="text-sm font-semibold text-text-secondary flex items-center gap-1.5 leading-relaxed">
+              <Award className="h-4.5 w-4.5 text-primary-blue-light" />
               Validated against standard FDA & WHO databases.
             </p>
           </div>
@@ -93,8 +93,8 @@ export default function ReportPage() {
 
         {/* AI Medical Breakdown */}
         <div className="space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Medical Explanation</h4>
-          <p className="text-sm leading-relaxed text-slate-600 bg-slate-50/30 p-6 border border-slate-100 rounded-2xl">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted">AI Medical Explanation</h4>
+          <p className="text-sm leading-relaxed text-text-secondary bg-surface-app/30 p-6 border border-border-app dark:border-slate-800 rounded-2xl">
             {report.explanation}
           </p>
         </div>
@@ -103,10 +103,10 @@ export default function ReportPage() {
         <div
           className={`rounded-2xl border p-6 ${
             report.severity === "high"
-              ? "bg-red-500/5 border-red-500/15 text-red-700"
+              ? "bg-severity-high/5 border-severity-high/15 text-severity-high"
               : report.severity === "moderate"
-                ? "bg-amber-500/5 border-amber-500/15 text-amber-700"
-                : "bg-blue-500/5 border-blue-500/15 text-blue-700"
+                ? "bg-severity-moderate/5 border-severity-moderate/15 text-severity-moderate"
+                : "bg-severity-low/5 border-severity-low/15 text-severity-low"
           }`}
         >
           <div className="flex gap-3">
@@ -121,7 +121,7 @@ export default function ReportPage() {
         </div>
 
         {/* Sign-off disclaimer */}
-        <div className="border-t border-slate-100 pt-6 text-center text-[10px] font-semibold text-slate-400 leading-relaxed max-w-2xl mx-auto">
+        <div className="border-t border-border-app dark:border-slate-850 pt-6 text-center text-[10px] font-semibold text-text-muted leading-relaxed max-w-2xl mx-auto">
           This document is generated by Drug Checker AI for reference purposes only. It does not replace personal physician consultations. Report generated on behalf of registered user.
         </div>
       </Card>

@@ -12,17 +12,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
+          <label htmlFor={inputId} className="block text-sm font-semibold text-text-secondary dark:text-gray-300">
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={`w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 ${error ? "border-red-400 focus:border-red-500 focus:ring-red-500/20" : ""} ${className}`}
+          className={`w-full rounded-xl border border-border-app bg-bg-app px-4 py-3 text-text-primary placeholder:text-text-muted transition focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue/20 disabled:cursor-not-allowed disabled:bg-surface-app dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-gray-500 dark:focus:border-primary-blue-light dark:focus:ring-primary-blue-light/20 ${error ? "border-danger-red focus:border-danger-red focus:ring-danger-red/20" : ""} ${className}`}
           {...props}
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger-red">{error}</p>}
       </div>
     );
   },

@@ -1,18 +1,15 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import Card from "@/app/components/ui/Card";
 
 export default function Disclaimer() {
   return (
-    <Card className="border-amber-500/20 bg-amber-500/5 p-5">
+    <Card className="border-warning-orange/25 bg-warning-orange/5 dark:bg-warning-orange/10 dark:border-warning-orange/20 transition-colors p-5">
       <div className="flex gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <AlertCircle className="h-5 w-5 text-warning-orange shrink-0 mt-0.5" />
         <div>
-          <h3 className="text-sm font-bold text-amber-800 uppercase tracking-wider">Medical Disclaimer</h3>
-          <p className="mt-1 text-xs leading-relaxed text-amber-700/90 font-medium">
-            Drug Checker AI provides educational information only and is not a
-            substitute for professional medical advice, diagnosis, or treatment.
-            Always consult a qualified healthcare provider before making
-            medication decisions.
+          <h4 className="font-bold text-warning-orange text-sm">Clinical Disclaimer</h4>
+          <p className="mt-1 text-xs leading-relaxed text-text-secondary dark:text-gray-300">
+            This tool is for educational purposes and provides information based on a limited demo database. It does not replace professional medical advice. Always consult your doctor or pharmacist before making any decisions about your medications.
           </p>
         </div>
       </div>
