@@ -9,7 +9,7 @@ import Input from "@/app/components/ui/Input";
 import Button from "@/app/components/ui/Button";
 
 export default function RegisterForm() {
-  const router = useRouter(); ``
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,11 +89,11 @@ export default function RegisterForm() {
         </span>
       </Button>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-text-secondary">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-bold text-emerald-600 transition hover:text-emerald-700 hover:underline"
+          className="font-bold text-primary-blue transition hover:text-primary-blue-light hover:underline"
         >
           Sign in
         </Link>

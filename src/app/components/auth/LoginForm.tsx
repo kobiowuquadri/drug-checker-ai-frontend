@@ -45,12 +45,12 @@ export default function LoginForm() {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="block text-sm font-semibold text-text-secondary dark:text-gray-300">
             Password
           </label>
           <Link
             href="/forgot-password"
-            className="text-xs font-semibold text-emerald-600 transition hover:text-emerald-700 hover:underline"
+            className="text-xs font-semibold text-primary-blue transition hover:text-primary-blue-light hover:underline"
           >
             Forgot password?
           </Link>
@@ -62,7 +62,7 @@ export default function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
           required
           disabled={isSubmitting}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:bg-slate-50"
+          className="w-full rounded-xl border border-border-app bg-bg-app px-4 py-3 text-text-primary placeholder:text-text-muted transition focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue/20 disabled:cursor-not-allowed disabled:bg-surface-app dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-gray-500 dark:focus:border-primary-blue-light dark:focus:ring-primary-blue-light/20"
         />
       </div>
 
@@ -79,11 +79,11 @@ export default function LoginForm() {
         </span>
       </Button>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-text-secondary">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-bold text-emerald-600 transition hover:text-emerald-700 hover:underline"
+          className="font-bold text-primary-blue transition hover:text-primary-blue-light hover:underline"
         >
           Create one
         </Link>

@@ -24,27 +24,27 @@ export default function HistoryPage() {
         {MOCK_HISTORY.map((item, index) => (
           <Card
             key={item.drugs.join("-")}
-            className="group hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 border-slate-200/80 bg-white"
+            className="group hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 border-border-app bg-card-app dark:border-slate-800"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-4 flex-wrap">
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
                     <Clock className="h-3.5 w-3.5" />
                     Log #{MOCK_HISTORY.length - index}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
                     <Calendar className="h-3.5 w-3.5" />
                     June 15, 2026
                   </span>
                 </div>
                 
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-800 group-hover:text-emerald-700 transition duration-200">
+                  <h3 className="text-base font-extrabold text-text-primary group-hover:text-primary-blue-light transition duration-200">
                     {item.drugs.join(" + ")}
                   </h3>
-                  <p className="mt-1 text-sm text-slate-600 font-semibold">{item.summary}</p>
-                  <p className="mt-1.5 text-xs text-slate-500 leading-relaxed max-w-2xl">{item.explanation}</p>
+                  <p className="mt-1 text-sm text-text-secondary font-semibold">{item.summary}</p>
+                  <p className="mt-1.5 text-xs text-text-muted leading-relaxed max-w-2xl">{item.explanation}</p>
                 </div>
               </div>
 
@@ -52,7 +52,7 @@ export default function HistoryPage() {
                 <Badge variant={item.severity}>{severityLabels[item.severity]}</Badge>
                 <Link
                   href="/dashboard/report"
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition"
+                  className="rounded-lg p-2 text-text-muted hover:bg-surface-app hover:text-text-primary transition dark:hover:bg-slate-800"
                   title="View full report details"
                 >
                   <ChevronRight className="h-5 w-5" />

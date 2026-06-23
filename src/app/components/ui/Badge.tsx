@@ -1,4 +1,4 @@
-type BadgeVariant = "high" | "moderate" | "low" | "none" | "default";
+type BadgeVariant = "critical" | "high" | "moderate" | "low" | "none" | "default";
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -7,11 +7,12 @@ interface BadgeProps {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  high: "bg-red-500/10 border-red-500/20 text-red-600 border",
-  moderate: "bg-amber-500/10 border-amber-500/20 text-amber-700 border",
-  low: "bg-blue-500/10 border-blue-500/20 text-blue-600 border",
-  none: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 border",
-  default: "bg-slate-500/10 border-slate-500/20 text-slate-600 border",
+  critical: "bg-severity-critical/10 border-severity-critical/20 text-severity-critical border",
+  high: "bg-severity-high/10 border-severity-high/20 text-severity-high border",
+  moderate: "bg-severity-moderate/10 border-severity-moderate/20 text-severity-moderate border",
+  low: "bg-severity-low/10 border-severity-low/20 text-severity-low border",
+  none: "bg-severity-safe/10 border-severity-safe/20 text-severity-safe border",
+  default: "bg-gray-500/10 border-gray-500/20 text-gray-600 border dark:text-gray-400 dark:border-gray-700",
 };
 
 export default function Badge({

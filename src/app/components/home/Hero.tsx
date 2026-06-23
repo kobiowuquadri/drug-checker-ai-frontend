@@ -126,34 +126,34 @@ const Hero = () => {
   return (
     <section className="relative overflow-hidden bg-mesh-pattern py-20 lg:py-32">
       {/* Decorative Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] -z-10 h-[50vw] w-[50vw] animate-pulse-slow rounded-full bg-emerald-400/10 blur-[100px]" />
-      <div className="absolute right-[-10%] top-[20%] -z-10 h-[40vw] w-[40vw] animate-pulse-slow rounded-full bg-teal-400/10 blur-[120px]" />
+      <div className="absolute top-[-10%] left-[-10%] -z-10 h-[50vw] w-[50vw] animate-pulse-slow rounded-full bg-primary-blue/5 blur-[100px] dark:bg-primary-blue/10" />
+      <div className="absolute right-[-10%] top-[20%] -z-10 h-[40vw] w-[40vw] animate-pulse-slow rounded-full bg-medical-green/5 blur-[120px] dark:bg-medical-green/10" />
 
       <div className="relative mx-auto grid max-w-7xl gap-16 px-6 lg:grid-cols-12 lg:items-center">
         {/* Left Content */}
         <div className="lg:col-span-7">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/15 bg-emerald-500/5 px-4 py-2 text-emerald-700 shadow-sm">
-            <Sparkles className="h-4 w-4 text-emerald-600 animate-pulse" />
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-blue/15 bg-primary-blue/5 px-4 py-2 text-primary-blue shadow-sm dark:border-primary-blue-light/20 dark:text-primary-blue-light dark:bg-primary-blue-dark/20">
+            <Sparkles className="h-4 w-4 text-primary-blue dark:text-primary-blue-light animate-pulse" />
             <span className="text-xs font-semibold tracking-wide uppercase">
               AI-Powered Medication Safety
             </span>
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl md:text-6xl">
             Make Every Medication
-            <span className="block mt-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="block mt-1 bg-gradient-to-r from-primary-blue via-primary-blue-light to-purple-accent bg-clip-text text-transparent">
               Decision Safer.
             </span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-text-secondary">
             Identify dangerous drug-to-drug interactions instantly. Get plain-language analysis and clear guidance powered by advanced clinical AI data.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               href="/register"
-              className="group flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-600/30"
+              className="group flex items-center justify-center gap-2 rounded-2xl bg-primary-blue px-8 py-4 font-semibold text-white shadow-lg shadow-primary-blue/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-blue-light hover:shadow-primary-blue/30"
             >
               Get Started Free
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
@@ -161,47 +161,47 @@ const Hero = () => {
 
             <Link
               href="#features"
-              className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white/80 px-8 py-4 font-semibold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-sm"
+              className="flex items-center justify-center rounded-2xl border border-border-app bg-card-app/80 px-8 py-4 font-semibold text-text-secondary backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-surface-app dark:border-slate-800 dark:hover:bg-slate-800"
             >
               Learn More
             </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-3 gap-6 border-t border-slate-100 pt-8 max-w-lg">
+          <div className="mt-12 grid grid-cols-3 gap-6 border-t border-border-app dark:border-slate-800/40 pt-8 max-w-lg">
             <div>
-              <p className="text-2xl font-bold text-slate-900">10K+</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Checks Daily</p>
+              <p className="text-2xl font-bold text-text-primary">10K+</p>
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider mt-1">Checks Daily</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">99.8%</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">AI Accuracy</p>
+              <p className="text-2xl font-bold text-text-primary">99.8%</p>
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider mt-1">AI Accuracy</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">100%</p>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Secure & Private</p>
+              <p className="text-2xl font-bold text-text-primary">100%</p>
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wider mt-1">Secure & Private</p>
             </div>
           </div>
         </div>
 
         {/* Right Interactive Demo Widget */}
         <div className="lg:col-span-5">
-          <div className="relative animate-float rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-md">
+          <div className="relative animate-float rounded-3xl border border-border-app bg-card-app/90 p-6 shadow-2xl shadow-slate-900/5 backdrop-blur-md dark:border-slate-800 dark:shadow-none transition-colors duration-300">
             {/* Widget top header */}
-            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="mb-5 flex items-center justify-between border-b border-border-app/50 dark:border-slate-850 pb-4">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-emerald-500/10 p-1.5 text-emerald-600">
+                <div className="rounded-lg bg-primary-blue/10 p-1.5 text-primary-blue dark:bg-primary-blue/20 dark:text-primary-blue-light">
                   <Brain className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Interactive Demo</h3>
-                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Try it now</p>
+                  <h3 className="font-bold text-text-primary text-sm">Interactive Demo</h3>
+                  <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Try it now</p>
                 </div>
               </div>
               
               {(selectedDrugs.length > 0 || result) && (
                 <button
                   onClick={handleReset}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-text-muted hover:text-text-primary transition cursor-pointer"
                 >
                   <RefreshCw className="h-3 w-3" />
                   Reset
@@ -212,13 +212,13 @@ const Hero = () => {
             {/* Quick Presets */}
             {selectedDrugs.length === 0 && !result && (
               <div className="mb-5">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Select a combination:</p>
+                <p className="text-xs font-semibold text-text-secondary mb-2">Select a combination:</p>
                 <div className="flex flex-wrap gap-2">
                   {PRESETS.map((preset, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleApplyPreset(preset.drugs)}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-500 hover:bg-emerald-500/5 transition duration-200 cursor-pointer"
+                      className="rounded-full border border-border-app bg-card-app px-3 py-1.5 text-xs font-medium text-text-secondary hover:border-primary-blue hover:bg-primary-blue/10 dark:border-slate-800 transition duration-200 cursor-pointer"
                     >
                       {preset.label}
                     </button>
@@ -231,7 +231,7 @@ const Hero = () => {
             {!result && (
               <div className="relative mb-4">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Search className="h-4 w-4 text-slate-400" />
+                  <Search className="h-4 w-4 text-text-muted" />
                 </div>
                 <input
                   type="text"
@@ -243,20 +243,20 @@ const Hero = () => {
                       : "Search mock drugs (e.g. Warfarin, Aspirin)..."
                   }
                   disabled={selectedDrugs.length >= 4 || isChecking}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-9 pr-4 text-sm outline-none transition duration-200 focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500 disabled:opacity-60"
+                  className="w-full rounded-xl border border-border-app bg-surface-app/50 py-3 pl-9 pr-4 text-sm text-text-primary outline-none transition duration-200 focus:border-primary-blue focus:bg-bg-app focus:ring-1 focus:ring-primary-blue disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900/50 dark:focus:border-primary-blue-light dark:focus:ring-primary-blue-light"
                 />
 
                 {/* Search Results Dropdown */}
                 {searchResults.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <div className="absolute z-20 mt-1 w-full rounded-xl border border-border-app bg-card-app py-1 shadow-lg dark:border-slate-800">
                     {searchResults.map((drug) => (
                       <button
                         key={drug}
                         onClick={() => handleAddDrug(drug)}
-                        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 transition"
+                        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-text-secondary hover:bg-surface-app transition cursor-pointer"
                       >
                         <span>{drug}</span>
-                        <Plus className="h-4 w-4 text-slate-400" />
+                        <Plus className="h-4 w-4 text-text-muted" />
                       </button>
                     ))}
                   </div>
@@ -267,17 +267,17 @@ const Hero = () => {
             {/* Selected Drug Tags */}
             {!result && selectedDrugs.length > 0 && (
               <div className="mb-5">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Medication List ({selectedDrugs.length}):</p>
+                <p className="text-xs font-semibold text-text-secondary mb-2">Medication List ({selectedDrugs.length}):</p>
                 <div className="flex flex-wrap gap-2">
                   {selectedDrugs.map((drug) => (
                     <span
                       key={drug}
-                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200/50 animate-fade-in"
+                      className="inline-flex items-center gap-1 rounded-full bg-surface-app px-3 py-1 text-xs font-semibold text-text-secondary border border-border-app dark:border-slate-800 animate-fade-in"
                     >
                       {drug}
                       <button
                         onClick={() => handleRemoveDrug(drug)}
-                        className="rounded-full p-0.5 hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition"
+                        className="rounded-full p-0.5 hover:bg-border-app text-text-muted hover:text-text-primary transition cursor-pointer dark:hover:bg-slate-800"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -292,7 +292,7 @@ const Hero = () => {
               <button
                 onClick={handleCheck}
                 disabled={selectedDrugs.length < 2 || isChecking}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 px-4 font-semibold text-white shadow-lg transition duration-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-blue py-3.5 px-4 font-semibold text-white shadow-lg shadow-primary-blue/15 hover:shadow-primary-blue/30 transition duration-200 hover:bg-primary-blue-light disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isChecking ? (
                   <>
@@ -311,8 +311,8 @@ const Hero = () => {
             {/* Result display */}
             {result && severityInfo && (
               <div className="space-y-4 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Interaction Analysis</span>
+                <div className="flex items-center justify-between border-b border-border-app/50 dark:border-slate-850 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-text-muted">Interaction Analysis</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${severityInfo.badge}`}>
                     {result.severity} risk
                   </span>
@@ -322,22 +322,22 @@ const Hero = () => {
                   <div className="flex items-start gap-2.5">
                     <ResultIcon className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-bold text-sm text-slate-800">{result.summary}</h4>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-600">{result.explanation}</p>
+                      <h4 className="font-bold text-sm text-text-primary">{result.summary}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-text-secondary">{result.explanation}</p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Clinical Guidance</h5>
-                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-3">
+                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Clinical Guidance</h5>
+                  <p className="text-xs text-text-secondary leading-relaxed bg-surface-app border border-border-app/50 rounded-xl p-3 dark:border-slate-800">
                     {result.recommendation}
                   </p>
                 </div>
 
                 <button
                   onClick={handleReset}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-3 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border-app bg-card-app py-3 text-xs font-semibold text-text-secondary shadow-sm hover:bg-surface-app transition cursor-pointer dark:border-slate-800 dark:hover:bg-slate-800"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                   Check another combination
@@ -346,7 +346,7 @@ const Hero = () => {
             )}
 
             {/* Small disclaimer footer */}
-            <p className="mt-4 text-center text-[9px] leading-relaxed text-slate-400">
+            <p className="mt-4 text-center text-[9px] leading-relaxed text-text-muted">
               Demo includes standard combinations. Always check full clinical details inside. Not professional advice.
             </p>
           </div>

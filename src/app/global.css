@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --animate-pulse-slow: pulse-slow 12s ease-in-out infinite;
   --animate-float: float 8s ease-in-out infinite;
@@ -15,14 +17,76 @@
     50% { transform: translateY(-12px) rotate(1deg); }
   }
   @keyframes glow {
-    0% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.1), 0 0 20px rgba(16, 185, 129, 0.05); }
-    100% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.15); }
+    0% { box-shadow: 0 0 10px rgba(20, 40, 160, 0.1), 0 0 20px rgba(20, 40, 160, 0.05); }
+    100% { box-shadow: 0 0 25px rgba(20, 40, 160, 0.25), 0 0 40px rgba(20, 40, 160, 0.15); }
   }
+
+  /* Primary Colors */
+  --color-primary-blue: #1428A0;
+  --color-primary-blue-light: #3046D3;
+  --color-primary-blue-dark: #0D1B6E;
+  --color-medical-green: #4CD137;
+  --color-medical-green-light: #7BED6A;
+  --color-medical-green-dark: #2BAE1A;
+  --color-danger-red: #FF0000;
+  --color-danger-red-light: #FF4D4F;
+  --color-danger-red-dark: #CC0000;
+  --color-warning-orange: #F59E0B;
+
+  /* Severity Colors */
+  --color-severity-safe: #4CD137;
+  --color-severity-low: #22C55E;
+  --color-severity-moderate: #F59E0B;
+  --color-severity-high: #FF0000;
+  --color-severity-critical: #7F1D1D;
+
+  /* Theme variables default definitions (Light Theme) */
+  --color-bg-app: #FFFFFF;
+  --color-surface-app: #F8FAFC;
+  --color-border-app: #E2E8F0;
+  --color-card-app: #FFFFFF;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
+
+  /* Additional Colors */
+  --color-info-blue: #3B82F6;
+  --color-success-green: #10B981;
+  --color-purple-accent: #7C3AED;
+  --color-purple-light: #A78BFA;
+  --color-cyan-accent: #06B6D4;
+  --color-yellow-alert: #FACC15;
+
+  /* Gray Scale overrides */
+  --color-gray-50: #F8FAFC;
+  --color-gray-100: #F1F5F9;
+  --color-gray-200: #E2E8F0;
+  --color-gray-300: #CBD5E1;
+  --color-gray-400: #94A3B8;
+  --color-gray-500: #64748B;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1E293B;
+  --color-gray-900: #0F172A;
 }
 
 :root {
-  --background: #fbfdfc;
-  --foreground: #090d16;
+  --background: var(--color-bg-app);
+  --foreground: var(--color-text-primary);
+}
+
+.dark {
+  /* Override theme variables for Dark Theme */
+  --color-bg-app: #0F172A;
+  --color-surface-app: #1E293B;
+  --color-border-app: #334155;
+  --color-card-app: #1E293B;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+
+  --background: var(--color-bg-app);
+  --foreground: var(--color-text-primary);
 }
 
 html {
@@ -39,7 +103,7 @@ body {
 /* Custom background mesh */
 .bg-mesh-pattern {
   background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 0%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(20, 40, 160, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, rgba(76, 209, 55, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(124, 58, 237, 0.05) 0px, transparent 50%);
 }
