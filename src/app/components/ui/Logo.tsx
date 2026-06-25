@@ -15,7 +15,7 @@ export default function Logo({ href = "/", showTagline = true, className = "" }:
       <div className="relative h-14 w-56">
         {/* Light theme logo: drugCheckerAi logo-black.png */}
         <Image
-          src="/image/drugCheckerAi logo-black.png"
+          src="/image/drugCheckerAilogo-black.png"
           alt="Drug Checker AI Logo"
           fill
           priority
