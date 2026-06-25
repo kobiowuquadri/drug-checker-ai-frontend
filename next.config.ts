@@ -11,6 +11,18 @@ const nextConfig: NextConfig = {
         source: "/drugs/:path*",
         destination: `${process.env.NEXT_PUBLIC_API_URL || "https://drug-checker-ai-backend.onrender.com/api/v1"}/drugs/:path*`,
       },
+      {
+        source: "/interactions/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "https://drug-checker-ai-backend.onrender.com/api/v1"}/interactions/:path*`,
+      },
+      {
+        source: "/history/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "https://drug-checker-ai-backend.onrender.com/api/v1"}/history/:path*`,
+      },
+      {
+        source: "/reports/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "https://drug-checker-ai-backend.onrender.com/api/v1"}/reports/:path*`,
+      },
     ];
   },
 };

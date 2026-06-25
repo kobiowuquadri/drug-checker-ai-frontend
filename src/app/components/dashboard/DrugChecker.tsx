@@ -9,7 +9,8 @@ import Disclaimer from "@/app/components/dashboard/Disclaimer";
 import DrugSearch from "@/app/components/dashboard/DrugSearch";
 import EmptyState from "@/app/components/dashboard/EmptyState";
 import SelectedDrugs from "@/app/components/dashboard/SelectedDrugs";
-import { getMockInteraction, InteractionResult } from "@/lib/mock-data";
+import { getAuthHeaders } from "@/app/components/auth/AuthContext";
+import { BackendInteractionResponse } from "@/lib/api-types";
 
 export interface SelectedDrug {
   rxcui: string;
@@ -78,7 +79,7 @@ function formatTermType(tty: string): TtyFormat {
 
 export default function DrugChecker() {
   const [selectedDrugs, setSelectedDrugs] = useState<SelectedDrug[]>([]);
-  const [result, setResult] = useState<InteractionResult | null>(null);
+  const [result, setResult] = useState<BackendInteractionResponse | null>(null);
   const [isChecking, setIsChecking] = useState(false);
 
   // States for medication details modal
@@ -130,13 +131,31 @@ export default function DrugChecker() {
     setIsChecking(true);
     setResult(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    try {
+      const response = await fetch("/interactions/check", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          drugs: selectedDrugs.map((d) => ({
+            rxcui: d.rxcui,
+            name: d.name,
+          })),
+        }),
+      });
 
-    const drugNames = selectedDrugs.map((d) => d.name);
-    const interaction = getMockInteraction(drugNames);
-    setResult(interaction);
-    setIsChecking(false);
-    toast.success("Interaction check complete");
+      const json = await response.json();
+      if (json.success && json.data) {
+        setResult(json.data);
+        toast.success("Interaction check complete");
+      } else {
+        toast.error(json.message || "Failed to check interactions");
+      }
+    } catch (error) {
+      console.error("Error checking interactions:", error);
+      toast.error("An error occurred while running the interaction check");
+    } finally {
+      setIsChecking(false);
+    }
   }
 
   return (
