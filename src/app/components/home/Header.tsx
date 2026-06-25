@@ -9,7 +9,7 @@ const Header = () => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border-app/40 bg-bg-app/70 dark:bg-surface-app/80 backdrop-blur-xl transition-all duration-300 dark:border-slate-800/40">
+    <header className="sticky top-0 z-50 border-b border-border-app/40 bg-bg-app/70 dark:bg-slate-800/90 backdrop-blur-xl transition-all duration-300 dark:border-slate-800/40">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
         <Logo showTagline={false} />
 

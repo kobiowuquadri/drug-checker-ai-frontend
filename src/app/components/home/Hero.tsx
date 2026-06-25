@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,7 +15,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
-import { getMockInteraction, searchDrugs, MOCK_DRUGS, InteractionResult } from "@/lib/mock-data";
+import { getMockInteraction, InteractionResult } from "@/lib/mock-data";
 
 const PRESETS = [
   { label: "Warfarin + Ibuprofen", drugs: ["Warfarin", "Ibuprofen"] },
@@ -30,20 +30,36 @@ const Hero = () => {
   const [result, setResult] = useState<InteractionResult | null>(null);
   const [isChecking, setIsChecking] = useState(false);
 
-  // Search logic
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-    if (val.trim()) {
-      const filtered = MOCK_DRUGS.filter(
-        (d) =>
-          d.toLowerCase().includes(val.toLowerCase()) &&
-          !selectedDrugs.includes(d)
-      );
-      setSearchResults(filtered);
-    } else {
+  // Debounced search logic for live API
+  useEffect(() => {
+    if (!searchQuery.trim()) {
       setSearchResults([]);
+      return;
     }
+
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const response = await fetch(`/drugs/search?q=${encodeURIComponent(searchQuery)}`);
+        const json = await response.json();
+        if (json.success && json.data?.drugs) {
+          const filtered = json.data.drugs
+            .map((drug: any) => drug.name)
+            .filter((name: string) => !selectedDrugs.includes(name));
+          setSearchResults(filtered);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error("Error searching drugs in hero:", error);
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery, selectedDrugs]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
   const handleAddDrug = (drug: string) => {

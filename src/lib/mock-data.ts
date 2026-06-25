@@ -98,13 +98,6 @@ const KNOWN_INTERACTIONS: Record<string, InteractionResult> = {
 };
 
 export function getMockInteraction(drugs: string[]): InteractionResult {
-  const key = normalizeDrugKey(drugs);
-  const known = KNOWN_INTERACTIONS[key];
-
-  if (known) {
-    return known;
-  }
-
   if (drugs.length < 2) {
     return {
       drugs,
@@ -112,6 +105,46 @@ export function getMockInteraction(drugs: string[]): InteractionResult {
       summary: "Add more medications",
       explanation: "Select at least two medications to check for interactions.",
       recommendation: "Add another drug to run an interaction check.",
+    };
+  }
+
+  const lowerDrugs = drugs.map((d) => d.toLowerCase());
+  
+  // Find which of our known base drugs are present
+  const baseIngredients = [
+    "warfarin",
+    "ibuprofen",
+    "aspirin",
+    "metformin",
+    "lisinopril",
+    "atorvastatin",
+    "amoxicillin",
+    "omeprazole",
+    "sertraline",
+    "albuterol"
+  ];
+  
+  const matchedIngredients = baseIngredients.filter((ingredient) => 
+    lowerDrugs.some((drug) => drug.includes(ingredient))
+  );
+
+  // Check if any pair of matched ingredients has a known interaction
+  let foundInteraction: InteractionResult | null = null;
+  for (let i = 0; i < matchedIngredients.length; i++) {
+    for (let j = i + 1; j < matchedIngredients.length; j++) {
+      const pairKey = [matchedIngredients[i], matchedIngredients[j]].sort().join("+");
+      if (KNOWN_INTERACTIONS[pairKey]) {
+        foundInteraction = KNOWN_INTERACTIONS[pairKey];
+        break;
+      }
+    }
+    if (foundInteraction) break;
+  }
+
+  if (foundInteraction) {
+    return {
+      ...foundInteraction,
+      drugs: drugs, // Keep original names for portal display
     };
   }
 
