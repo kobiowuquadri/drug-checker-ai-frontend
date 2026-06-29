@@ -11,6 +11,7 @@ import EmptyState from "@/app/components/dashboard/EmptyState";
 import SelectedDrugs from "@/app/components/dashboard/SelectedDrugs";
 import { getAuthHeaders } from "@/app/components/auth/AuthContext";
 import { BackendInteractionResponse } from "@/lib/api-types";
+import DrugScanner from "@/app/components/dashboard/DrugScanner";
 
 export interface SelectedDrug {
   rxcui: string;
@@ -81,6 +82,7 @@ export default function DrugChecker() {
   const [selectedDrugs, setSelectedDrugs] = useState<SelectedDrug[]>([]);
   const [result, setResult] = useState<BackendInteractionResponse | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // States for medication details modal
   const [activeDetailsDrug, setActiveDetailsDrug] = useState<SelectedDrug | null>(null);
@@ -127,6 +129,15 @@ export default function DrugChecker() {
     setResult(null);
   }
 
+  function handleAddScannedDrugs(drugs: SelectedDrug[]) {
+    setSelectedDrugs((current) => {
+      const currentRxcuis = current.map((d) => d.rxcui);
+      const filteredNew = drugs.filter((d) => !currentRxcuis.includes(d.rxcui));
+      return [...current, ...filteredNew];
+    });
+    setResult(null);
+  }
+
   async function handleCheck() {
     setIsChecking(true);
     setResult(null);
@@ -167,7 +178,11 @@ export default function DrugChecker() {
 
       <Disclaimer />
 
-      <DrugSearch onSelect={handleSelect} selectedDrugs={selectedDrugs} />
+      <DrugSearch
+        onSelect={handleSelect}
+        selectedDrugs={selectedDrugs}
+        onScanClick={() => setIsScannerOpen(true)}
+      />
 
       {selectedDrugs.length > 0 ? (
         <SelectedDrugs
@@ -314,6 +329,13 @@ export default function DrugChecker() {
           </div>
         </div>
       )}
+
+      {/* Medication Scanner Modal */}
+      <DrugScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onAddDrugs={handleAddScannedDrugs}
+      />
 
     </div>
   );

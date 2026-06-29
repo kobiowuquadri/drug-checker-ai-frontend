@@ -7,6 +7,12 @@
   --animate-float: float 8s ease-in-out infinite;
   --animate-float-delayed: float 8s ease-in-out infinite 4s;
   --animate-glow: glow 4s ease-in-out infinite alternate;
+  --animate-scan-laser: scan-laser 2.5s ease-in-out infinite;
+
+  @keyframes scan-laser {
+    0%, 100% { top: 0%; opacity: 0.3; }
+    50% { top: 100%; opacity: 1; }
+  }
 
   @keyframes pulse-slow {
     0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.2; }

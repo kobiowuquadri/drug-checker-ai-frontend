@@ -1,16 +1,16 @@
 "use client";
 
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Plus, Loader2, Scan } from "lucide-react";
 import { useState, useEffect } from "react";
-import Input from "@/app/components/ui/Input";
 import { SelectedDrug } from "./DrugChecker";
 
 interface DrugSearchProps {
   onSelect: (drug: SelectedDrug) => void;
   selectedDrugs: SelectedDrug[];
+  onScanClick: () => void;
 }
 
-export default function DrugSearch({ onSelect, selectedDrugs }: DrugSearchProps) {
+export default function DrugSearch({ onSelect, selectedDrugs, onScanClick }: DrugSearchProps) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,12 +54,20 @@ export default function DrugSearch({ onSelect, selectedDrugs }: DrugSearchProps)
         ) : (
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
         )}
-        <Input
+        <input
           placeholder="Search for a medication (e.g. Warfarin, Ibuprofen, Metformin)..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          className="pl-12 border-border-app focus:border-primary-blue bg-bg-app text-text-primary dark:bg-slate-900/50 dark:border-slate-800 dark:focus:border-primary-blue-light"
+          className="w-full rounded-xl border border-border-app bg-bg-app pl-12 pr-12 py-3 text-text-primary placeholder:text-text-muted transition focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue/20 disabled:cursor-not-allowed disabled:bg-surface-app dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-100 dark:placeholder:text-gray-500 dark:focus:border-primary-blue-light dark:focus:ring-primary-blue-light/20"
         />
+        <button
+          type="button"
+          onClick={onScanClick}
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl text-primary-blue hover:bg-primary-blue/10 dark:text-primary-blue-light dark:hover:bg-primary-blue/20 transition cursor-pointer"
+          title="Scan drug packaging or prescription label"
+        >
+          <Scan className="h-4.5 w-4.5" />
+        </button>
       </div>
 
       {query && suggestions.length > 0 && (
