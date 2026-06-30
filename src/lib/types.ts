@@ -49,6 +49,7 @@ export interface Interaction {
   recommendation: string;
   source: string;
   aiExplanation: string | null;
+  isAiGenerated?: boolean;
 }
 
 export interface DuplicateTherapy {

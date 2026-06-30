@@ -674,11 +674,11 @@ export default function DrugChecker() {
           <Card padding="lg">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Verified interactions</p>
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Interaction findings</p>
                 <h2 className="mt-1.5 text-2xl font-black text-text-primary">
                   {result.interactions.length
                     ? `${result.interactions.length} finding${result.interactions.length !== 1 ? "s" : ""}`
-                    : "No verified findings"}
+                    : "No findings"}
                 </h2>
               </div>
               <Button disabled={!result.historyId} onClick={() => setReportOpen(true)} className="shrink-0 px-5 py-3">
@@ -707,9 +707,16 @@ export default function DrugChecker() {
                       </div>
                       <div className="flex items-center gap-2.5 shrink-0">
                         <Badge variant={severityVariant(interaction.severity)}>{interaction.severity}</Badge>
-                        <span className="rounded-full border border-border-app bg-white px-3 py-1 text-xs font-bold text-text-muted">
-                          {interaction.source}
-                        </span>
+                        {interaction.isAiGenerated ? (
+                          <span className="flex items-center gap-1 rounded-full border border-primary-blue/20 bg-primary-blue/8 px-3 py-1 text-xs font-bold text-primary-blue">
+                            <Brain className="h-3 w-3" />
+                            AI Analysis
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-border-app bg-white px-3 py-1 text-xs font-bold text-text-muted">
+                            {interaction.source}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -761,9 +768,9 @@ export default function DrugChecker() {
             ) : (
               <div className="mt-6 rounded-[28px] border border-dashed border-border-app bg-surface-app p-10 text-center">
                 <MedicalIllustration name="safe" className="mx-auto h-32 w-40" />
-                <p className="mt-3 text-sm font-black text-text-primary">No verified interactions found</p>
+                <p className="mt-3 text-sm font-black text-text-primary">No significant interactions found</p>
                 <p className="mt-1 text-sm font-medium text-text-secondary">
-                  No verified pair combinations were found in the local interaction database.
+                  Neither the clinical database nor AI analysis identified significant interactions for this combination.
                 </p>
               </div>
             )}
