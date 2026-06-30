@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { LogOut, Mail, ShieldCheck, UserRound } from "lucide-react";
 import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
 import Button from "@/app/components/ui/Button";
@@ -15,14 +14,10 @@ export default function ProfilePage() {
       <DashboardHeader title="Profile and account" description="Review your secure account profile and session settings." />
       <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <Card className="p-8 text-center">
-          <div className="mx-auto h-28 w-28 overflow-hidden rounded-[32px] shadow-soft ring-4 ring-primary-blue/10">
-            <Image
-              src="/image/rian-ramirez-rm7rZYdl3rY-unsplash.jpg"
-              alt="Profile photo"
-              width={112}
-              height={112}
-              className="h-full w-full object-cover"
-            />
+          <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-[32px] bg-gradient-to-br from-primary-blue to-blue-700 shadow-soft ring-4 ring-primary-blue/10">
+            <span className="text-4xl font-black text-white">
+              {user?.name?.[0]?.toUpperCase() ?? "U"}
+            </span>
           </div>
           <h2 className="mt-5 text-2xl font-black">{user?.name || "User"}</h2>
           <p className="mt-1 text-sm font-medium text-text-secondary">{user?.email || "Loading profile..."}</p>

@@ -71,6 +71,8 @@ export const api = {
     details: (rxcui: string) => apiRequest<Drug>(`/drugs/${encodeURIComponent(rxcui)}`, { method: "GET" }),
     scan: (payload: { image: string; mimeType: string }) =>
       apiRequest<{ medicationName: string; genericName: string }>("/drugs/scan", { method: "POST", body: payload }),
+    barcode: (payload: { barcodeValue: string; format?: string }) =>
+      apiRequest<{ medicationName: string | null; genericName: string | null; rxcui: string | null; source: string }>("/drugs/barcode", { method: "POST", body: payload }),
   },
   interactions: {
     check: (drugs: Drug[]) =>

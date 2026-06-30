@@ -17,6 +17,7 @@ import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
 import Button from "@/app/components/ui/Button";
 import Card from "@/app/components/ui/Card";
 import Badge from "@/app/components/ui/Badge";
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import MedicalIllustration from "@/app/components/illustrations/MedicalIllustrations";
 import { api } from "@/lib/api";
 import { ReportDetail, ReportListItem } from "@/lib/types";
@@ -51,6 +52,8 @@ function ReportContent() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ReportDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
 
   // Load the reports list
   useEffect(() => {
@@ -108,6 +111,8 @@ function ReportContent() {
   }, [query, reports]);
 
   async function deleteReport(reportId: number, fromModal = false) {
+    setIsDeletingReport(true);
+    setConfirmDeleteId(null);
     try {
       await api.reports.remove(reportId);
       toast.success("Report deleted.");
@@ -115,6 +120,8 @@ function ReportContent() {
       setReports((current) => current.filter((item) => item.id !== reportId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to delete report.");
+    } finally {
+      setIsDeletingReport(false);
     }
   }
 
@@ -182,7 +189,7 @@ function ReportContent() {
                   <div className="mt-5 flex items-center justify-between border-t border-border-app pt-4">
                     <span className="text-xs font-bold text-text-muted">{item.interactionCount} verified findings</span>
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={() => deleteReport(item.id)} className="px-3 py-2">
+                      <Button variant="secondary" onClick={() => setConfirmDeleteId(item.id)} className="px-3 py-2">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button onClick={() => openModal(item.id)} className="px-4 py-2">
@@ -197,10 +204,20 @@ function ReportContent() {
         )}
       </div>
 
+      <ConfirmModal
+        isOpen={confirmDeleteId !== null}
+        title="Delete report?"
+        description="This clinical report will be permanently deleted and cannot be recovered."
+        confirmLabel="Yes, delete"
+        isLoading={isDeletingReport}
+        onConfirm={() => confirmDeleteId !== null && deleteReport(confirmDeleteId, selectedId === confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
       {/* Report detail modal */}
       {selectedId && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-2xl rounded-[34px] border border-border-app bg-white shadow-premium">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/40 backdrop-blur-sm sm:items-start sm:p-4">
+          <div className="w-full max-w-2xl rounded-t-[34px] border border-border-app bg-white shadow-premium sm:my-8 sm:rounded-[34px]">
             <div className="flex items-center justify-between border-b border-border-app px-7 py-5 print:hidden">
               <h3 className="text-xl font-black">Clinical report</h3>
               <div className="flex items-center gap-2">
@@ -211,7 +228,7 @@ function ReportContent() {
                   <Download className="h-4 w-4" />
                 </Button>
                 {detail && (
-                  <Button variant="danger" onClick={() => deleteReport(detail.id, true)} className="px-3 py-2">
+                  <Button variant="danger" onClick={() => setConfirmDeleteId(detail.id)} className="px-3 py-2">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}

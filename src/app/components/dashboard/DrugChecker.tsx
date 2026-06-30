@@ -34,6 +34,7 @@ import Card from "@/app/components/ui/Card";
 import Badge from "@/app/components/ui/Badge";
 import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
 import DrugScanner from "@/app/components/dashboard/DrugScanner";
+import BarcodeScanner from "@/app/components/dashboard/BarcodeScanner";
 import MedicalIllustration from "@/app/components/illustrations/MedicalIllustrations";
 import { api } from "@/lib/api";
 import { Drug, InteractionCheckResult, Severity } from "@/lib/types";
@@ -155,6 +156,7 @@ export default function DrugChecker() {
   const [result, setResult] = useState<InteractionCheckResult | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportTitle, setReportTitle] = useState("");
   const [reportNotes, setReportNotes] = useState("");
@@ -331,7 +333,7 @@ export default function DrugChecker() {
               </div>
 
               {/* Scan buttons */}
-              <div className="flex shrink-0 gap-2">
+              <div className="flex flex-wrap shrink-0 gap-2">
                 <button
                   onClick={() => setScannerOpen(true)}
                   title="Scan medication label with camera"
@@ -340,24 +342,27 @@ export default function DrugChecker() {
                   <Camera className="h-3.5 w-3.5" />
                   Camera
                 </button>
-                {[
-                  { icon: Barcode, label: "Barcode" },
-                  { icon: Mic, label: "Voice" },
-                ].map(({ icon: Icon, label }) => (
-                  <div key={label} className="relative">
-                    <button
-                      disabled
-                      title={`${label} — coming soon`}
-                      className="flex items-center gap-1.5 rounded-2xl border border-border-app bg-surface-app px-3 py-2 text-xs font-bold text-text-muted opacity-60 cursor-not-allowed"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {label}
-                    </button>
-                    <span className="absolute -right-1 -top-1.5 rounded-full bg-primary-blue px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
-                      Soon
-                    </span>
-                  </div>
-                ))}
+                <button
+                  onClick={() => setBarcodeScannerOpen(true)}
+                  title="Scan medication barcode"
+                  className="flex items-center gap-1.5 rounded-2xl border border-primary-blue/30 bg-primary-blue/5 px-3 py-2 text-xs font-bold text-primary-blue transition hover:bg-primary-blue/10"
+                >
+                  <Barcode className="h-3.5 w-3.5" />
+                  Barcode
+                </button>
+                <div className="relative">
+                  <button
+                    disabled
+                    title="Voice — coming soon"
+                    className="flex items-center gap-1.5 rounded-2xl border border-border-app bg-surface-app px-3 py-2 text-xs font-bold text-text-muted opacity-60 cursor-not-allowed"
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    Voice
+                  </button>
+                  <span className="absolute -right-1 -top-1.5 rounded-full bg-primary-blue px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                    Soon
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -768,8 +773,8 @@ export default function DrugChecker() {
 
       {/* ── Generate report modal ── */}
       {reportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
-          <form onSubmit={generateReport} className="w-full max-w-lg rounded-[34px] border border-border-app bg-white p-6 shadow-premium">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/35 backdrop-blur-sm sm:items-center sm:p-4">
+          <form onSubmit={generateReport} className="w-full max-w-lg rounded-t-[34px] border border-border-app bg-white p-6 shadow-premium sm:rounded-[34px]">
             <div className="flex items-center justify-between border-b border-border-app pb-4">
               <h3 className="text-xl font-black">Generate clinical report</h3>
               <button type="button" onClick={() => setReportOpen(false)} className="rounded-2xl border border-border-app p-2 text-text-muted hover:bg-surface-app">
@@ -804,6 +809,11 @@ export default function DrugChecker() {
       <DrugScanner
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
+        onDrugDetected={(drug) => selectDrug(drug)}
+      />
+      <BarcodeScanner
+        isOpen={barcodeScannerOpen}
+        onClose={() => setBarcodeScannerOpen(false)}
         onDrugDetected={(drug) => selectDrug(drug)}
       />
     </div>

@@ -18,6 +18,7 @@ import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
 import Button from "@/app/components/ui/Button";
 import Card from "@/app/components/ui/Card";
 import Badge from "@/app/components/ui/Badge";
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import MedicalIllustration from "@/app/components/illustrations/MedicalIllustrations";
 import { api } from "@/lib/api";
 import { HistoryDetail, HistoryListItem } from "@/lib/types";
@@ -39,6 +40,7 @@ export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   // Detail modal
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -89,6 +91,7 @@ export default function HistoryPage() {
 
   async function deleteHistory(id: number) {
     setDeletingId(id);
+    setConfirmDeleteId(null);
     try {
       await api.history.remove(id);
       setItems((current) => current.filter((item) => item.id !== id));
@@ -196,17 +199,18 @@ export default function HistoryPage() {
                       <span>{item.duplicateTherapyCount} duplicate warnings</span>
                     </div>
                   </div>
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="secondary"
                       onClick={() => openReportModal(item)}
                       className="px-4 py-2.5"
                     >
-                      <FileText className="h-4 w-4" /> Report
+                      <FileText className="h-4 w-4" />
+                      <span className="hidden sm:inline">Report</span>
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={() => deleteHistory(item.id)}
+                      onClick={() => setConfirmDeleteId(item.id)}
                       disabled={deletingId === item.id}
                       className="px-4 py-2.5"
                     >
@@ -226,8 +230,8 @@ export default function HistoryPage() {
 
       {/* History detail modal */}
       {detailId && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-2xl rounded-[34px] border border-border-app bg-white shadow-premium">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/40 backdrop-blur-sm sm:items-start sm:p-4">
+          <div className="w-full max-w-2xl rounded-t-[34px] border border-border-app bg-white shadow-premium sm:my-8 sm:rounded-[34px]">
             <div className="flex items-center justify-between border-b border-border-app px-7 py-5">
               <h3 className="text-xl font-black">Interaction details</h3>
               <button
@@ -345,12 +349,22 @@ export default function HistoryPage() {
         </div>
       )}
 
+      <ConfirmModal
+        isOpen={confirmDeleteId !== null}
+        title="Delete history?"
+        description="This interaction check will be permanently removed from your history. This cannot be undone."
+        confirmLabel="Yes, delete"
+        isLoading={deletingId !== null}
+        onConfirm={() => confirmDeleteId !== null && deleteHistory(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
       {/* Generate report modal */}
       {reportItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center sm:p-4">
           <form
             onSubmit={handleGenerateReport}
-            className="w-full max-w-lg rounded-[34px] border border-border-app bg-white p-7 shadow-premium"
+            className="w-full max-w-lg rounded-t-[34px] border border-border-app bg-white p-6 shadow-premium sm:rounded-[34px] sm:p-7"
           >
             <div className="flex items-center justify-between border-b border-border-app pb-5">
               <h3 className="text-xl font-black">Generate clinical report</h3>

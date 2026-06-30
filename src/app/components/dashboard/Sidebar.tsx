@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen = false, onClose, isCollapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
@@ -108,6 +108,25 @@ export default function Sidebar({ isOpen = false, onClose, isCollapsed = false, 
 
         {/* Footer */}
         <div className="border-t border-border-app p-4">
+          {/* User info */}
+          {!isCollapsed ? (
+            <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border-app bg-surface-app px-3 py-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-blue text-sm font-black text-white">
+                {user?.name?.[0]?.toUpperCase() ?? "U"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-text-primary">{user?.name ?? "User"}</p>
+                <p className="truncate text-xs font-medium text-text-muted">{user?.email ?? ""}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-3 flex justify-center">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-blue text-sm font-black text-white">
+                {user?.name?.[0]?.toUpperCase() ?? "U"}
+              </div>
+            </div>
+          )}
+
           {!isCollapsed && (
             <div className="mb-3 rounded-[24px] bg-surface-app p-4">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-primary-blue">

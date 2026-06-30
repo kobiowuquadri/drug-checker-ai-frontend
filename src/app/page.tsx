@@ -180,7 +180,10 @@ export default function HomePage() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" className="bg-white py-24">
+      <section id="features" className="relative overflow-hidden bg-white py-24">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -right-40 -top-40 h-96 w-96 rounded-full bg-primary-blue/5 blur-3xl" />
+        <div className="pointer-events-none absolute -left-40 bottom-0 h-72 w-72 rounded-full bg-blue-200/20 blur-3xl" />
         <div className={shell}>
           <div className="max-w-2xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-primary-blue">Platform features</p>
@@ -210,7 +213,11 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="bg-surface-app py-24">
+      <section id="how-it-works" className="relative overflow-hidden bg-surface-app py-24">
+        {/* Dot grid pattern */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,#94a3b820_1px,transparent_1px)] bg-[size:28px_28px]" />
+        {/* Corner accent */}
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-primary-blue/5 blur-2xl" />
         <div className={shell}>
           <div className="max-w-2xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-primary-blue">How it works</p>
@@ -233,7 +240,9 @@ export default function HomePage() {
       </section>
 
       {/* ── TEAM ── */}
-      <section id="team" className="bg-white py-24">
+      <section id="team" className="relative overflow-hidden bg-white py-24">
+        <div className="pointer-events-none absolute left-0 top-0 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-blue/4 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 translate-x-1/3 translate-y-1/3 rounded-full bg-blue-100/40 blur-3xl" />
         <div className={shell}>
           <div className="max-w-2xl">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-primary-blue">Our team</p>
@@ -269,7 +278,10 @@ export default function HomePage() {
       </section>
 
       {/* ── REPORTS ── */}
-      <section className="bg-primary-blue py-24 text-white">
+      <section className="relative overflow-hidden bg-primary-blue py-24 text-white">
+        {/* Mesh accent */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_55%)]" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-400/20 blur-3xl" />
         <div className={`${shell} grid gap-12 lg:grid-cols-2 lg:items-center`}>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Clinical reports</p>
@@ -310,7 +322,9 @@ export default function HomePage() {
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="bg-surface-app py-24">
+      <section id="faq" className="relative overflow-hidden bg-surface-app py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,#cbd5e120_1px,transparent_1px)] bg-[size:24px_24px]" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-48 w-px -translate-x-1/2 bg-gradient-to-b from-primary-blue/20 to-transparent" />
         <div className={shell}>
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-primary-blue">FAQ</p>
@@ -329,8 +343,11 @@ export default function HomePage() {
       <section className="bg-white py-24">
         <div className={shell}>
           <div className="relative overflow-hidden rounded-[40px] bg-primary-blue px-10 py-16 text-center shadow-premium md:px-16">
-            {/* Subtle radial glow */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent_60%)]" />
+            {/* Background decorations */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.12),transparent_60%)]" />
+            <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-blue-400/20 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-16 -right-16 h-56 w-56 rounded-full bg-blue-800/30 blur-2xl" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:32px_32px]" />
             <div className="relative">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Ready to start?</p>
               <h2 className="mx-auto mt-4 max-w-2xl text-4xl font-black tracking-tight text-white">
