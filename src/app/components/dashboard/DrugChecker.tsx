@@ -9,7 +9,9 @@ import Disclaimer from "@/app/components/dashboard/Disclaimer";
 import DrugSearch from "@/app/components/dashboard/DrugSearch";
 import EmptyState from "@/app/components/dashboard/EmptyState";
 import SelectedDrugs from "@/app/components/dashboard/SelectedDrugs";
-import { getMockInteraction, InteractionResult } from "@/lib/mock-data";
+import { getAuthHeaders } from "@/app/components/auth/AuthContext";
+import { BackendInteractionResponse } from "@/lib/api-types";
+import DrugScanner from "@/app/components/dashboard/DrugScanner";
 
 export interface SelectedDrug {
   rxcui: string;
@@ -78,8 +80,9 @@ function formatTermType(tty: string): TtyFormat {
 
 export default function DrugChecker() {
   const [selectedDrugs, setSelectedDrugs] = useState<SelectedDrug[]>([]);
-  const [result, setResult] = useState<InteractionResult | null>(null);
+  const [result, setResult] = useState<BackendInteractionResponse | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // States for medication details modal
   const [activeDetailsDrug, setActiveDetailsDrug] = useState<SelectedDrug | null>(null);
@@ -126,17 +129,44 @@ export default function DrugChecker() {
     setResult(null);
   }
 
+  function handleAddScannedDrugs(drugs: SelectedDrug[]) {
+    setSelectedDrugs((current) => {
+      const currentRxcuis = current.map((d) => d.rxcui);
+      const filteredNew = drugs.filter((d) => !currentRxcuis.includes(d.rxcui));
+      return [...current, ...filteredNew];
+    });
+    setResult(null);
+  }
+
   async function handleCheck() {
     setIsChecking(true);
     setResult(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    try {
+      const response = await fetch("/interactions/check", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          drugs: selectedDrugs.map((d) => ({
+            rxcui: d.rxcui,
+            name: d.name,
+          })),
+        }),
+      });
 
-    const drugNames = selectedDrugs.map((d) => d.name);
-    const interaction = getMockInteraction(drugNames);
-    setResult(interaction);
-    setIsChecking(false);
-    toast.success("Interaction check complete");
+      const json = await response.json();
+      if (json.success && json.data) {
+        setResult(json.data);
+        toast.success("Interaction check complete");
+      } else {
+        toast.error(json.message || "Failed to check interactions");
+      }
+    } catch (error) {
+      console.error("Error checking interactions:", error);
+      toast.error("An error occurred while running the interaction check");
+    } finally {
+      setIsChecking(false);
+    }
   }
 
   return (
@@ -148,7 +178,11 @@ export default function DrugChecker() {
 
       <Disclaimer />
 
-      <DrugSearch onSelect={handleSelect} selectedDrugs={selectedDrugs} />
+      <DrugSearch
+        onSelect={handleSelect}
+        selectedDrugs={selectedDrugs}
+        onScanClick={() => setIsScannerOpen(true)}
+      />
 
       {selectedDrugs.length > 0 ? (
         <SelectedDrugs
@@ -295,6 +329,13 @@ export default function DrugChecker() {
           </div>
         </div>
       )}
+
+      {/* Medication Scanner Modal */}
+      <DrugScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onAddDrugs={handleAddScannedDrugs}
+      />
 
     </div>
   );
