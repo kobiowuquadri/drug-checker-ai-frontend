@@ -1,369 +1,406 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
-import Badge from "@/app/components/ui/Badge";
-import Card from "@/app/components/ui/Card";
-import Button from "@/app/components/ui/Button";
-import { MOCK_HISTORY } from "@/lib/mock-data";
-import { getAuthHeaders } from "@/app/components/auth/AuthContext";
-import { Clock, Calendar, ChevronRight, Loader2, Info, Trash2, ClipboardList, FileText, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
+import {
+  AlertTriangle,
+  Brain,
+  Calendar,
+  ChevronRight,
+  FileText,
+  Loader2,
+  Pill,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
+import Button from "@/app/components/ui/Button";
+import Card from "@/app/components/ui/Card";
+import Badge from "@/app/components/ui/Badge";
+import MedicalIllustration from "@/app/components/illustrations/MedicalIllustrations";
+import { api } from "@/lib/api";
+import { HistoryDetail, HistoryListItem } from "@/lib/types";
 
-interface NormalizedHistoryItem {
-  id: string | number;
-  drugs: string[];
-  severity: "critical" | "high" | "moderate" | "low" | "none" | "default";
-  summary: string;
-  explanation: string;
-  dateStr: string;
-  isMock: boolean;
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-const severityLabels = {
-  critical: "Critical Risk",
-  high: "High Risk",
-  moderate: "Moderate Risk",
-  low: "Low Risk",
-  none: "Clinical Safe",
-  default: "Assessed Log",
-};
-
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "June 15, 2026";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch (e) {
-    return dateStr;
-  }
+function variant(severity?: string | null) {
+  if (severity === "HIGH") return "high";
+  if (severity === "MODERATE") return "moderate";
+  if (severity === "LOW") return "low";
+  return "none";
 }
 
 export default function HistoryPage() {
-  const router = useRouter();
-  const [items, setItems] = useState<NormalizedHistoryItem[]>([]);
+  const [items, setItems] = useState<HistoryListItem[]>([]);
+  const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isUsingMock, setIsUsingMock] = useState(false);
+  const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Modal States
-  const [activeHistoryItem, setActiveHistoryItem] = useState<NormalizedHistoryItem | null>(null);
+  // Detail modal
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detail, setDetail] = useState<HistoryDetail | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // Generate report modal
+  const [reportItem, setReportItem] = useState<HistoryListItem | null>(null);
   const [reportTitle, setReportTitle] = useState("");
   const [reportNotes, setReportNotes] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-  useEffect(() => {
-    if (activeHistoryItem) {
-      setReportTitle(`Interaction Report: ${activeHistoryItem.drugs.join(" + ")}`);
-    }
-  }, [activeHistoryItem]);
-
-  useEffect(() => {
-    async function fetchHistory() {
-      setIsLoading(true);
-      try {
-        const response = await fetch("/history", {
-          headers: getAuthHeaders(),
-        });
-        const json = await response.json();
-        
-        if (json.success && json.data && json.data.length > 0) {
-          const normalized = json.data.map((item: any) => {
-            const drugNames = item.selectedDrugs?.map((d: any) => typeof d === 'string' ? d : (d.name || "")) || [];
-            const rawSeverity = item.safetySummary?.highestSeverity || item.severity || "NONE";
-            const severityLower = rawSeverity.toLowerCase();
-            
-            return {
-              id: item.id,
-              drugs: drugNames,
-              severity: (severityLower === "safe" ? "none" : severityLower) as any,
-              summary: item.safetySummary?.actionMessage || item.summary || "Interaction assessment completed.",
-              explanation: item.aiSummary || item.explanation || "",
-              dateStr: formatDate(item.createdAt),
-              isMock: false,
-            };
-          });
-          
-          // Sort by ID descending (latest first)
-          normalized.sort((a: any, b: any) => Number(b.id) - Number(a.id));
-          setItems(normalized);
-          setIsUsingMock(false);
-        } else {
-          useFallback();
-        }
-      } catch (error) {
-        console.error("Error fetching interaction history:", error);
-        useFallback();
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    function useFallback() {
-      const normalizedMock: NormalizedHistoryItem[] = MOCK_HISTORY.map((item, index) => ({
-        id: `mock-${index}`,
-        drugs: item.drugs,
-        severity: item.severity.toLowerCase() as any,
-        summary: item.summary,
-        explanation: item.explanation,
-        dateStr: "June 15, 2026",
-        isMock: true,
-      }));
-      setItems(normalizedMock);
-      setIsUsingMock(true);
-    }
-
-    fetchHistory();
-  }, []);
-
-  async function handleDelete(id: string | number, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // If it's a mock item, just remove it from local state
-    if (String(id).startsWith("mock-")) {
-      setItems((prev) => prev.filter((item) => item.id !== id));
-      toast.success("Sandbox interaction log removed.");
-      return;
-    }
-
-    if (!confirm("Are you sure you want to delete this interaction log? This action cannot be undone.")) {
-      return;
-    }
-
+  async function loadHistory() {
+    setIsLoading(true);
+    setError("");
     try {
-      const response = await fetch(`/history/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-      
-      const json = await response.json();
-      if (json.success) {
-        setItems((prev) => prev.filter((item) => item.id !== id));
-        toast.success("Interaction log deleted successfully.");
-      } else {
-        toast.error(json.message || "Failed to delete log");
-      }
-    } catch (error) {
-      console.error("Error deleting log:", error);
-      toast.error("An error occurred while deleting the log.");
+      const response = await api.history.list();
+      setItems(response.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load history.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  async function handleGenerateReport(e: React.FormEvent) {
-    e.preventDefault();
-    if (!activeHistoryItem) return;
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-    if (activeHistoryItem.isMock) {
-      toast.success("Clinical Report generated successfully (Sandbox Mode)!");
-      setShowGenerateModal(false);
-      setReportNotes("");
-      router.push(`/dashboard/report?id=${activeHistoryItem.id}`);
+  useEffect(() => {
+    if (!detailId) {
+      setDetail(null);
       return;
     }
+    setIsLoadingDetail(true);
+    api.history
+      .detail(detailId)
+      .then((res) => setDetail(res.data))
+      .catch(() => toast.error("Unable to load interaction details."))
+      .finally(() => setIsLoadingDetail(false));
+  }, [detailId]);
 
-    setIsGenerating(true);
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return items;
+    return items.filter((item) => item.selectedDrugs.some((drug) => drug.name.toLowerCase().includes(term)));
+  }, [items, query]);
+
+  async function deleteHistory(id: number) {
+    setDeletingId(id);
     try {
-      const response = await fetch("/reports/generate", {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          historyId: activeHistoryItem.id,
-          title: reportTitle.trim() || "Drug Interaction Report",
-          notes: reportNotes.trim() || "",
-        }),
-      });
-
-      const json = await response.json();
-      if (json.success && json.data) {
-        toast.success("Clinical Safety Report generated successfully!");
-        setShowGenerateModal(false);
-        setReportNotes("");
-        router.push(`/dashboard/report?id=${json.data.id}`);
-      } else {
-        toast.error(json.message || "Failed to generate report.");
-      }
-    } catch (error) {
-      console.error("Error generating report:", error);
-      toast.error("An error occurred while generating the report.");
+      await api.history.remove(id);
+      setItems((current) => current.filter((item) => item.id !== id));
+      toast.success("History item deleted.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to delete history.");
     } finally {
-      setIsGenerating(false);
+      setDeletingId(null);
+    }
+  }
+
+  function openReportModal(item: HistoryListItem) {
+    setReportItem(item);
+    setReportTitle(`Drug interaction report: ${item.selectedDrugs.map((d) => d.name).join(" + ")}`);
+    setReportNotes("");
+  }
+
+  async function handleGenerateReport(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!reportItem) return;
+    setIsGeneratingReport(true);
+    try {
+      await api.reports.generate({
+        historyId: reportItem.id,
+        title: reportTitle || "Drug Interaction Report",
+        notes: reportNotes || undefined,
+      });
+      toast.success("Clinical report generated. View it in Clinical reports.");
+      setReportItem(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to generate report.");
+    } finally {
+      setIsGeneratingReport(false);
     }
   }
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div>
       <DashboardHeader
-        title="Interaction History Logs"
-        description="Review previous safety assessments generated by our clinical AI model."
+        title="Interaction history"
+        description="Review previous medication safety checks and create clinical reports from saved history."
       />
 
-      {isUsingMock && (
-        <div className="rounded-2xl border border-blue-500/10 bg-blue-500/5 p-4 text-xs font-semibold text-primary-blue-light flex items-center gap-2">
-          <Info className="h-4.5 w-4.5 text-primary-blue shrink-0" />
-          <span>Showing local sandbox history logs. Run a new interaction check while signed in to save logs to the cloud.</span>
+      <Card padding="lg">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Timeline</p>
+            <h2 className="mt-2 text-2xl font-black">{items.length} saved checks</h2>
+          </div>
+          <div className="relative w-full md:max-w-sm">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by medication"
+              className="w-full rounded-2xl border border-border-app bg-surface-app py-3 pl-10 pr-4 text-sm font-semibold"
+            />
+          </div>
         </div>
-      )}
+      </Card>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <Loader2 className="h-10 w-10 animate-spin text-primary-blue dark:text-primary-blue-light" />
-          <p className="text-sm font-semibold text-text-secondary">Loading history logs...</p>
-        </div>
-      ) : items.length > 0 ? (
-        <div className="space-y-4">
-          {items.map((item, index) => (
-            <Card
-              key={item.id}
-              className="group border-border-app bg-card-app dark:border-slate-800"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                      <Clock className="h-3.5 w-3.5" />
-                      Log #{item.isMock ? items.length - index : item.id}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {item.dateStr}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-base font-extrabold text-text-primary group-hover:text-primary-blue-light transition duration-200">
-                      {item.drugs.join(" + ")}
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="grid gap-4">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-32 animate-pulse rounded-[28px] bg-white shadow-soft" />
+            ))}
+          </div>
+        ) : error ? (
+          <Card className="p-10 text-center">
+            <MedicalIllustration name="no-results" className="mx-auto h-36 w-44" />
+            <p className="mt-3 font-black text-text-primary">{error}</p>
+            <Button onClick={loadHistory} className="mt-5">Retry</Button>
+          </Card>
+        ) : filtered.length === 0 ? (
+          <Card className="p-12 text-center">
+            <MedicalIllustration name="history" className="mx-auto h-44 w-56" />
+            <h3 className="mt-4 text-xl font-black">No history yet</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm font-medium text-text-secondary">
+              Run an interaction check while signed in and it will appear here automatically.
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((item) => (
+              <Card key={item.id} className="p-5 cursor-pointer hover:shadow-premium transition-shadow" onClick={() => setDetailId(item.id)}>
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge variant={variant(item.safetySummary?.highestSeverity)}>
+                        {item.safetySummary?.highestSeverity || "CLEAR"}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-text-muted">
+                        <Calendar className="h-4 w-4" /> {formatDate(item.createdAt)}
+                      </span>
+                    </div>
+                    <h3 className="mt-3 text-lg font-black text-text-primary">
+                      {item.selectedDrugs.map((drug) => drug.name).join(" + ")}
                     </h3>
-                    <p className="mt-1 text-sm text-text-secondary font-semibold">{item.summary}</p>
-                    {item.explanation && (
-                      <p className="mt-1.5 text-xs text-text-muted leading-relaxed max-w-2xl truncate">
-                        {item.explanation.replace(/[*#]/g, "")}
-                      </p>
-                    )}
+                    <p className="mt-2 text-sm font-medium text-text-secondary">
+                      {item.safetySummary?.actionMessage || "Medication safety check completed."}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-text-muted">
+                      <span>{item.interactionCount} verified interactions</span>
+                      <span>{item.duplicateTherapyCount} duplicate warnings</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => openReportModal(item)}
+                      className="px-4 py-2.5"
+                    >
+                      <FileText className="h-4 w-4" /> Report
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => deleteHistory(item.id)}
+                      disabled={deletingId === item.id}
+                      className="px-4 py-2.5"
+                    >
+                      {deletingId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
-                <div className="flex items-center gap-2 sm:gap-4 self-start sm:self-center shrink-0">
-                  <Badge variant={item.severity}>
-                    {severityLabels[item.severity] || "Log Details"}
-                  </Badge>
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveHistoryItem(item);
-                      setShowGenerateModal(true);
-                    }}
-                    className="rounded-lg p-2 text-text-muted hover:bg-primary-blue/10 hover:text-primary-blue transition dark:hover:bg-primary-blue/20 cursor-pointer"
-                    title="Generate Clinical Report"
-                  >
-                    <ClipboardList className="h-4.5 w-4.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => handleDelete(item.id, e)}
-                    className="rounded-lg p-2 text-text-muted hover:bg-red-500/10 hover:text-red-500 transition dark:hover:bg-red-950/30 cursor-pointer"
-                    title="Delete interaction log"
-                  >
-                    <Trash2 className="h-4.5 w-4.5" />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card className="text-center py-16 border-border-app bg-card-app dark:border-slate-800/80">
-          <p className="text-sm font-semibold text-text-secondary">No history logs found.</p>
-          <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary-blue font-bold hover:underline">
-            Go run a safety check
-          </Link>
-        </Card>
-      )}
-
-      {/* Report Generation Modal */}
-      {showGenerateModal && activeHistoryItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-all duration-300">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-border-app bg-card-app p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900/95 animate-scale-up">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border-app pb-4 dark:border-slate-850">
-              <div className="flex items-center gap-2 text-primary-blue dark:text-primary-blue-light">
-                <FileText className="h-5 w-5" />
-                <h3 className="text-base font-extrabold text-text-primary dark:text-white">
-                  Generate Clinical Report
-                </h3>
-              </div>
+      {/* History detail modal */}
+      {detailId && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="my-8 w-full max-w-2xl rounded-[34px] border border-border-app bg-white shadow-premium">
+            <div className="flex items-center justify-between border-b border-border-app px-7 py-5">
+              <h3 className="text-xl font-black">Interaction details</h3>
               <button
-                type="button"
-                onClick={() => setShowGenerateModal(false)}
-                className="rounded-xl border border-border-app p-2 text-text-muted hover:bg-surface-app hover:text-text-primary transition cursor-pointer dark:border-slate-800"
-                aria-label="Close"
+                onClick={() => setDetailId(null)}
+                className="rounded-2xl border border-border-app p-2 text-text-muted hover:bg-surface-app"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleGenerateReport} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-muted mb-1.5">
-                  Report Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={reportTitle}
-                  onChange={(e) => setReportTitle(e.target.value)}
-                  className="w-full rounded-xl border border-border-app bg-bg-app px-4 py-3 text-sm font-semibold text-text-primary focus:border-primary-blue focus:outline-none dark:border-slate-800 dark:bg-slate-900/50 dark:focus:border-primary-blue-light"
-                  placeholder="e.g. Interaction Report: Ibuprofen + Warfarin"
-                />
+            {isLoadingDetail ? (
+              <div className="py-16 text-center">
+                <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary-blue" />
+                <p className="mt-3 text-sm font-semibold text-text-secondary">Loading details…</p>
               </div>
+            ) : detail ? (
+              <div className="space-y-6 p-7">
+                <div className="flex flex-wrap gap-2">
+                  {detail.selectedDrugs.map((drug) => (
+                    <span key={drug.rxcui} className="inline-flex items-center gap-1.5 rounded-full border border-border-app bg-surface-app px-3 py-1.5 text-xs font-bold text-text-secondary">
+                      <Pill className="h-3.5 w-3.5 text-primary-blue" /> {drug.name}
+                    </span>
+                  ))}
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-muted mb-1.5">
-                  Clinical Notes / Observations (Optional)
-                </label>
-                <textarea
-                  value={reportNotes}
-                  onChange={(e) => setReportNotes(e.target.value)}
-                  rows={4}
-                  className="w-full rounded-xl border border-border-app bg-bg-app px-4 py-3 text-sm font-semibold text-text-primary focus:border-primary-blue focus:outline-none dark:border-slate-800 dark:bg-slate-900/50 dark:focus:border-primary-blue-light resize-none"
-                  placeholder="Add notes for the physician, pharmacist, or patient..."
-                />
-              </div>
+                {detail.safetySummary && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      ["Pairs checked", detail.safetySummary.totalPairsChecked],
+                      ["Verified", detail.safetySummary.verifiedInteractions],
+                      ["Duplicates", detail.safetySummary.duplicateTherapies],
+                      ["Unverified", detail.safetySummary.unverifiedPairs],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-3xl border border-border-app bg-surface-app p-4 text-center">
+                        <p className="text-xs font-bold text-text-muted">{label}</p>
+                        <p className="mt-1 text-2xl font-black">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {/* Actions Footer */}
-              <div className="mt-6 flex justify-end gap-3 border-t border-border-app pt-4 dark:border-slate-850">
-                <button
-                  type="button"
-                  onClick={() => setShowGenerateModal(false)}
-                  className="rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-850 dark:hover:bg-slate-850 dark:text-slate-200 px-5 py-2.5 text-sm font-bold transition duration-200 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <Button type="submit" disabled={isGenerating} className="px-6 py-2.5">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Generating...
-                    </>
-                  ) : (
-                    "Save & View Report"
-                  )}
-                </Button>
+                {detail.aiSummary && (
+                  <div className="rounded-[24px] border border-border-app bg-surface-app p-5">
+                    <div className="flex items-center gap-2 text-primary-blue">
+                      <Brain className="h-4 w-4" />
+                      <p className="text-xs font-black uppercase tracking-wide">AI safety summary</p>
+                    </div>
+                    <p className="mt-3 whitespace-pre-line text-sm font-medium leading-7 text-text-secondary">{detail.aiSummary}</p>
+                  </div>
+                )}
+
+                {detail.duplicateTherapies.length > 0 && (
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-black text-warning-orange">
+                      <AlertTriangle className="h-4 w-4" /> Duplicate therapy warnings
+                    </h4>
+                    <div className="mt-3 grid gap-3">
+                      {detail.duplicateTherapies.map((dup) => (
+                        <div key={dup.ingredient.rxcui} className="rounded-[24px] border border-warning-orange/20 bg-warning-orange/5 p-4">
+                          <p className="font-black text-text-primary">{dup.ingredient.name}</p>
+                          <p className="mt-2 text-sm text-text-secondary">{dup.effect}</p>
+                          <p className="mt-1 text-sm font-bold text-text-primary">{dup.recommendation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {detail.interactions.length > 0 ? (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-black uppercase tracking-wide text-text-muted">Verified interactions</h4>
+                    {detail.interactions.map((interaction) => (
+                      <article
+                        key={`${interaction.drugA.rxcui}-${interaction.drugB.rxcui}`}
+                        className="rounded-[24px] border border-border-app bg-surface-app p-5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Badge variant={variant(interaction.severity)}>{interaction.severity}</Badge>
+                            <h5 className="mt-3 text-base font-black">
+                              {interaction.drugA.name} + {interaction.drugB.name}
+                            </h5>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm font-medium text-text-secondary">{interaction.effect}</p>
+                        <p className="mt-2 text-sm font-bold text-text-primary">{interaction.recommendation}</p>
+                        {interaction.aiExplanation && (
+                          <p className="mt-3 text-xs font-medium leading-6 text-text-muted">{interaction.aiExplanation}</p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[24px] border border-dashed border-border-app p-8 text-center">
+                    <MedicalIllustration name="safe" className="mx-auto h-28 w-36" />
+                    <p className="mt-2 text-sm font-black">No verified interactions found</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 border-t border-border-app pt-4">
+                  <Button variant="secondary" onClick={() => setDetailId(null)}>Close</Button>
+                  <Button onClick={() => {
+                    const item = items.find((i) => i.id === detailId);
+                    if (item) {
+                      setDetailId(null);
+                      openReportModal(item);
+                    }
+                  }}>
+                    <FileText className="h-4 w-4" /> Generate report
+                  </Button>
+                </div>
               </div>
-            </form>
+            ) : null}
           </div>
+        </div>
+      )}
+
+      {/* Generate report modal */}
+      {reportItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={handleGenerateReport}
+            className="w-full max-w-lg rounded-[34px] border border-border-app bg-white p-7 shadow-premium"
+          >
+            <div className="flex items-center justify-between border-b border-border-app pb-5">
+              <h3 className="text-xl font-black">Generate clinical report</h3>
+              <button
+                type="button"
+                onClick={() => setReportItem(null)}
+                className="rounded-2xl border border-border-app p-2 text-text-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-[24px] bg-surface-app p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-text-muted">Medications</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {reportItem.selectedDrugs.map((drug) => (
+                  <span key={drug.rxcui} className="rounded-full border border-border-app bg-white px-3 py-1 text-xs font-bold text-text-secondary">
+                    {drug.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <label className="mt-5 block text-sm font-bold text-text-secondary">Report title</label>
+            <input
+              value={reportTitle}
+              onChange={(e) => setReportTitle(e.target.value)}
+              className="mt-2 w-full rounded-2xl border border-border-app px-4 py-3 font-semibold focus:border-primary-blue focus:outline-none"
+              placeholder="Enter report title"
+            />
+
+            <label className="mt-4 block text-sm font-bold text-text-secondary">Clinical notes</label>
+            <textarea
+              value={reportNotes}
+              onChange={(e) => setReportNotes(e.target.value)}
+              rows={4}
+              className="mt-2 w-full resize-none rounded-2xl border border-border-app px-4 py-3 font-semibold focus:border-primary-blue focus:outline-none"
+              placeholder="Optional note for patient or clinician review"
+            />
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="secondary" onClick={() => setReportItem(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isGeneratingReport}>
+                {isGeneratingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                Save report
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </div>

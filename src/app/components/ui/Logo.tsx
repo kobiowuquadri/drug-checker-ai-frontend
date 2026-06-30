@@ -1,52 +1,42 @@
-"use client";
-
 import Link from "next/link";
-import Image from "next/image";
 
 interface LogoProps {
   href?: string;
   showTagline?: boolean;
   className?: string;
+  inverted?: boolean;
 }
 
-export default function Logo({ href = "/", showTagline = true, className = "" }: LogoProps) {
-  const content = (
-    <div className="flex flex-col">
-      <div className="relative h-14 w-56">
-        {/* Light theme logo: drugCheckerAi logo-black.png */}
-        <Image
-          src="/image/drugCheckerAilogo-black.png"
-          alt="Drug Checker AI Logo"
-          fill
-          priority
-          sizes="(max-width: 768px) 160px, 224px"
-          className="object-contain object-left dark:hidden"
-        />
-        {/* Dark theme logo: drugCheckerAi logo.png */}
-        <Image
-          src="/image/drugCheckerAi.png"
-          alt="Drug Checker AI Logo"
-          fill
-          priority
-          sizes="(max-width: 768px) 160px, 224px"
-          className="object-contain object-left hidden dark:block"
-        />
-      </div>
+function LogoMark({ inverted = false }: { inverted?: boolean }) {
+  return (
+    <span className="flex items-center gap-2 leading-none">
+      <span className={`text-[1.35rem] font-black tracking-tight leading-none ${inverted ? "text-white" : "text-text-primary"}`}>
+        Drug<span className={inverted ? "text-blue-200" : "text-primary-blue"}>Checker</span>
+      </span>
+      <span className={`rounded-md px-1.5 py-[3px] text-[10px] font-black uppercase tracking-widest leading-none ${inverted ? "border border-white/30 bg-white/15 text-white" : "bg-primary-blue text-white"}`}>
+        AI
+      </span>
+    </span>
+  );
+}
+
+export default function Logo({ href = "/", showTagline = true, className = "", inverted = false }: LogoProps) {
+  const mark = (
+    <div className={`inline-flex flex-col items-start gap-1 ${className}`}>
+      <LogoMark inverted={inverted} />
       {showTagline && (
-        <span className="text-[10px] font-semibold tracking-wider text-text-secondary dark:text-gray-400 uppercase mt-0.5 ml-1">
-          Know Before You Combine
+        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${inverted ? "text-white/50" : "text-text-muted"}`}>
+          Know before you combine
         </span>
       )}
     </div>
   );
 
-  if (href) {
-    return (
-      <Link href={href} className={`flex items-center gap-3 transition-opacity hover:opacity-90 ${className}`}>
-        {content}
-      </Link>
-    );
-  }
+  if (!href) return mark;
 
-  return <div className={`flex items-center gap-3 ${className}`}>{content}</div>;
+  return (
+    <Link href={href} className="inline-flex transition hover:opacity-85">
+      {mark}
+    </Link>
+  );
 }

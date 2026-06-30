@@ -1,555 +1,403 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { 
-  X, Camera, UploadCloud, Loader2, Check, 
-  AlertCircle, Pill, Sparkles, Scan, ChevronRight 
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, Camera, Check, Loader2, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
-import { SelectedDrug } from "./DrugChecker";
+import Button from "@/app/components/ui/Button";
+import { api } from "@/lib/api";
+import { Drug } from "@/lib/types";
+
+type ScanState = "loading-camera" | "streaming" | "processing" | "result" | "error";
 
 interface DrugScannerProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddDrugs: (drugs: SelectedDrug[]) => void;
+  onDrugDetected: (drug: Drug) => void;
 }
 
-export default function DrugScanner({ isOpen, onClose, onAddDrugs }: DrugScannerProps) {
-  const [activeTab, setActiveTab] = useState<"camera" | "upload">("camera");
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [filename, setFilename] = useState<string | null>(null);
-  
-  // Camera States
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCameraLoading, setIsCameraLoading] = useState(false);
-  
-  // Scanning/Processing States
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanStep, setScanStep] = useState(0);
-  const [scanResults, setScanResults] = useState<SelectedDrug[]>([]);
-  const [unresolvedDrugs, setUnresolvedDrugs] = useState<string[]>([]);
-  const [selectedResults, setSelectedResults] = useState<Record<string, boolean>>({});
-  
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+// ── Helpers (outside component — no stale closure risk) ────────────────────────
 
-  // Stop camera stream when modal closes or tab changes
-  useEffect(() => {
-    if (!isOpen || activeTab !== "camera") {
-      stopCamera();
-    } else {
-      startCamera();
+async function geminiScan(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1];
+  const res = await api.drugs.scan({ image: base64, mimeType: "image/jpeg" });
+  return {
+    brand: res.data.medicationName?.trim() || "UNKNOWN",
+    generic: res.data.genericName?.trim() || "UNKNOWN",
+  };
+}
+
+async function findDrugs(brand: string, generic: string) {
+  const brandOk = brand !== "UNKNOWN" && brand.length >= 3;
+  const genericOk = generic !== "UNKNOWN" && generic.length >= 3;
+
+  let results: Drug[] = [];
+  let usedKey: "brand" | "generic" = "brand";
+
+  if (brandOk) {
+    const r = await api.drugs.search(brand);
+    results = r.data.drugs.slice(0, 5);
+  }
+
+  if (results.length === 0 && genericOk) {
+    // Try each ingredient (e.g. "Aceclofenac + Paracetamol" → two searches)
+    for (const ingredient of generic.split(/\s*\+\s*/)) {
+      const r = await api.drugs.search(ingredient.trim());
+      const hits = r.data.drugs.slice(0, 5);
+      if (hits.length > 0) { results = hits; usedKey = "generic"; break; }
     }
-    return () => stopCamera();
-  }, [isOpen, activeTab]);
+  }
 
-  // Handle Scan Steps Animation
-  useEffect(() => {
-    if (!isScanning) {
-      setScanStep(0);
-      return;
-    }
+  return { results, usedKey };
+}
 
-    const interval = setInterval(() => {
-      setScanStep((prev) => {
-        if (prev < 4) return prev + 1;
-        clearInterval(interval);
-        return prev;
-      });
-    }, 600);
+function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetW: number, quality = 0.84) {
+  const scale = Math.min(1, targetW / (video.videoWidth || targetW));
+  canvas.width = Math.round((video.videoWidth || targetW) * scale);
+  canvas.height = Math.round((video.videoHeight || 600) * scale);
+  canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
 
-    return () => clearInterval(interval);
-  }, [isScanning]);
+// ── Component ──────────────────────────────────────────────────────────────────
 
-  const startCamera = async () => {
-    setIsCameraLoading(true);
-    setCameraError(null);
-    stopCamera();
+export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugScannerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const stateRef = useRef<ScanState>("loading-camera");
+  const autoTimerRef = useRef<number | null>(null);
+  const autoIntervalRef = useRef<number | null>(null);
+  const busyRef = useRef(false);
+
+  const [scanState, setScanState] = useState<ScanState>("loading-camera");
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [detectedBrand, setDetectedBrand] = useState("");
+  const [detectedGeneric, setDetectedGeneric] = useState("");
+  const [searchedBy, setSearchedBy] = useState<"brand" | "generic">("brand");
+  const [searchResults, setSearchResults] = useState<Drug[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  function setState(s: ScanState) {
+    stateRef.current = s;
+    setScanState(s);
+  }
+
+  // ── Camera management ────────────────────────────────────────────────────────
+
+  function clearAuto() {
+    if (autoTimerRef.current) { clearTimeout(autoTimerRef.current); autoTimerRef.current = null; }
+    if (autoIntervalRef.current) { clearInterval(autoIntervalRef.current); autoIntervalRef.current = null; }
+  }
+
+  function stopStream() {
+    clearAuto();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }
+
+  const startCamera = useCallback(async () => {
+    clearAuto();
+    busyRef.current = false;
+    setState("loading-camera");
+    setCapturedImage(null);
+    setDetectedBrand("");
+    setDetectedGeneric("");
+    setSearchResults([]);
+    setErrorMsg("");
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-      });
-      setCameraStream(stream);
+      const stream = await navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: true }));
+
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
-    } catch (err: any) {
-      console.error("Camera access error:", err);
-      setCameraError("Unable to access camera. Please check permissions or upload an image instead.");
-    } finally {
-      setIsCameraLoading(false);
+      setState("streaming");
+
+      // Auto-detect: 2 s warmup, then scan every 2.5 s
+      autoTimerRef.current = window.setTimeout(() => {
+        autoIntervalRef.current = window.setInterval(runAutoScan, 2500);
+      }, 2000);
+    } catch {
+      setState("error");
+      setErrorMsg("Camera access was denied. Please allow camera access in your browser settings.");
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
+  // ── Shared: present detected result ─────────────────────────────────────────
 
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    
-    if (ctx) {
-      // Set canvas size to video size
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      // Draw frame to canvas
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Convert to base64
-      const dataUrl = canvas.toDataURL("image/jpeg");
-      setImageSrc(dataUrl);
-      setFilename("camera_capture.jpg");
-      
-      // Stop camera once captured
-      stopCamera();
-      
-      // Start OCR scan
-      processScan(dataUrl, "camera_capture.jpg");
-    }
-  };
+  async function presentResult(dataUrl: string, brand: string, generic: string) {
+    clearAuto();
+    stopStream();
+    setState("processing");
+    setCapturedImage(dataUrl);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const brandKnown = brand !== "UNKNOWN" && brand.length >= 2;
+    const genericKnown = generic !== "UNKNOWN" && generic.length >= 2;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setImageSrc(dataUrl);
-      setFilename(file.name);
-      processScan(dataUrl, file.name);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const processScan = async (base64Image: string, name: string) => {
-    setIsScanning(true);
-    setScanResults([]);
-    setUnresolvedDrugs([]);
-
-    try {
-      // 1. Call server-side OCR api
-      const response = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Image, filename: name })
-      });
-
-      const json = await response.json();
-      if (!json.success || !json.data?.drugs) {
-        throw new Error(json.message || "Failed to parse drug names");
-      }
-
-      const rawDrugs = json.data.drugs as string[];
-
-      // 2. Query search database for each drug to get valid RxCUI
-      const resolved: SelectedDrug[] = [];
-      const unresolved: string[] = [];
-
-      await Promise.all(
-        rawDrugs.map(async (drugName) => {
-          try {
-            const searchRes = await fetch(`/drugs/search?q=${encodeURIComponent(drugName)}`);
-            const searchJson = await searchRes.json();
-            if (searchJson.success && searchJson.data?.drugs?.length > 0) {
-              // Find the best match (exact or first match)
-              const matched = searchJson.data.drugs[0];
-              resolved.push({
-                rxcui: matched.rxcui,
-                name: matched.name,
-                synonym: matched.synonym
-              });
-            } else {
-              unresolved.push(drugName);
-            }
-          } catch (err) {
-            console.error(`Error resolving drug ${drugName}:`, err);
-            unresolved.push(drugName);
-          }
-        })
-      );
-
-      setScanResults(resolved);
-      setUnresolvedDrugs(unresolved);
-
-      // Pre-select all resolved drugs
-      const initialSelection: Record<string, boolean> = {};
-      resolved.forEach((drug) => {
-        initialSelection[drug.rxcui] = true;
-      });
-      setSelectedResults(initialSelection);
-
-    } catch (err: any) {
-      console.error("Scan error:", err);
-      toast.error(err.message || "An error occurred during scanning");
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const toggleSelectDrug = (rxcui: string) => {
-    setSelectedResults((prev) => ({
-      ...prev,
-      [rxcui]: !prev[rxcui]
-    }));
-  };
-
-  const handleAddSelected = () => {
-    const drugsToAdd = scanResults.filter((drug) => selectedResults[drug.rxcui]);
-    if (drugsToAdd.length === 0) {
-      toast.error("Please select at least one medication to add.");
+    if (!brandKnown && !genericKnown) {
+      setState("error");
+      setErrorMsg("No medication label detected. Try holding the camera steady with good lighting.");
       return;
     }
-    onAddDrugs(drugsToAdd);
-    toast.success(`Added ${drugsToAdd.length} medication(s) to checklist.`);
-    handleReset();
-    onClose();
-  };
 
-  const handleReset = () => {
-    setImageSrc(null);
-    setFilename(null);
-    setScanResults([]);
-    setUnresolvedDrugs([]);
-    setSelectedResults({});
-    setIsScanning(false);
-    setScanStep(0);
-    if (activeTab === "camera") {
-      startCamera();
+    setDetectedBrand(brandKnown ? brand : "");
+    setDetectedGeneric(genericKnown ? generic : "");
+
+    try {
+      const { results, usedKey } = await findDrugs(brand, generic);
+      setSearchedBy(usedKey);
+      setSearchResults(results);
+      setState("result");
+    } catch {
+      setState("error");
+      setErrorMsg("Search failed. Please try again.");
     }
-  };
+  }
+
+  // ── Auto-scan ────────────────────────────────────────────────────────────────
+
+  async function runAutoScan() {
+    if (busyRef.current || stateRef.current !== "streaming") return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    busyRef.current = true;
+    try {
+      const dataUrl = captureFrame(video, canvas, 800, 0.84);
+      const { brand, generic } = await geminiScan(dataUrl);
+
+      const brandValid = brand !== "UNKNOWN" && brand.length >= 4;
+      const genericValid = generic !== "UNKNOWN" && generic.length >= 3;
+
+      if ((brandValid || genericValid) && stateRef.current === "streaming") {
+        await presentResult(dataUrl, brand, generic);
+      }
+    } catch {
+      // silent — keep trying
+    } finally {
+      busyRef.current = false;
+    }
+  }
+
+  // ── Manual capture ───────────────────────────────────────────────────────────
+
+  const captureManually = useCallback(async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || stateRef.current !== "streaming") return;
+
+    const dataUrl = captureFrame(video, canvas, 960, 0.88);
+    clearAuto();
+
+    try {
+      setState("processing");
+      setCapturedImage(dataUrl);
+      stopStream();
+
+      const { brand, generic } = await geminiScan(dataUrl);
+      await presentResult(dataUrl, brand, generic);
+    } catch (err) {
+      setState("error");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to identify the medication. Please try again.");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Drug selection ───────────────────────────────────────────────────────────
+
+  function handleSelect(drug: Drug) {
+    stopStream();
+    onDrugDetected(drug);
+    toast.success(`${drug.name} added to workspace`, { description: "From camera scan" });
+    onClose();
+  }
+
+  function handleRetry() {
+    startCamera();
+  }
+
+  function handleClose() {
+    stopStream();
+    setState("loading-camera");
+    setCapturedImage(null);
+    setDetectedBrand("");
+    setDetectedGeneric("");
+    setSearchResults([]);
+    setErrorMsg("");
+    onClose();
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      startCamera();
+    } else {
+      stopStream();
+      setState("loading-camera");
+    }
+    return stopStream;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const isProcessing = scanState === "loading-camera" || scanState === "processing";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md transition-all duration-300">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-border-app bg-card-app p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900/95 animate-scale-up flex flex-col max-h-[90vh]">
-        
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/65 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-t-[32px] sm:rounded-[32px] border border-border-app bg-white shadow-premium">
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border-app pb-4 dark:border-slate-850">
-          <div className="flex items-center gap-2 text-primary-blue dark:text-primary-blue-light">
-            <Scan className="h-5 w-5 animate-pulse" />
-            <h3 className="text-base font-extrabold text-text-primary dark:text-white">
-              Scan Medications
-            </h3>
+        <div className="flex items-center justify-between border-b border-border-app px-5 py-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-blue">Camera scan</p>
+            <h3 className="text-lg font-black text-text-primary">Scan medication label</h3>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              stopCamera();
-              onClose();
-            }}
-            className="rounded-xl border border-border-app p-2 text-text-muted hover:bg-surface-app hover:text-text-primary transition cursor-pointer dark:border-slate-800 dark:hover:bg-slate-800"
-            aria-label="Close scanner"
-          >
-            <X className="h-4 w-4" />
+          <button onClick={handleClose} className="rounded-2xl border border-border-app p-2 text-text-muted hover:bg-surface-app" aria-label="Close">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Scan Workflow content */}
-        <div className="flex-1 overflow-y-auto mt-4 py-2 space-y-4">
-          
-          {/* STEP 1: PROCESSING / SCANNING ANIMATION */}
-          {isScanning && (
-            <div className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-6">
-              <div className="relative h-24 w-24">
-                <div className="absolute inset-0 rounded-full border-4 border-primary-blue/20 dark:border-primary-blue-light/10" />
-                <div className="absolute inset-0 rounded-full border-4 border-t-primary-blue border-r-transparent border-b-transparent border-l-transparent animate-spin dark:border-t-primary-blue-light" />
-                <div className="absolute inset-4 bg-primary-blue/10 dark:bg-primary-blue-light/10 rounded-full flex items-center justify-center">
-                  <Pill className="h-8 w-8 text-primary-blue dark:text-primary-blue-light animate-bounce" />
-                </div>
-              </div>
-              
-              <div className="space-y-2 max-w-sm">
-                <h4 className="text-lg font-bold text-text-primary dark:text-white">
-                  Processing Smart Scan...
-                </h4>
-                <p className="text-xs text-text-muted">
-                  We are analyzing your bottle/label using secure vision processing.
-                </p>
-              </div>
+        {/* Camera viewport */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950">
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className={`h-full w-full object-cover transition-opacity duration-300 ${scanState === "streaming" ? "opacity-100" : "opacity-0"}`}
+          />
 
-              {/* Progress Stepper list */}
-              <div className="w-full max-w-md bg-surface-app border border-border-app/40 rounded-2xl p-4 text-left space-y-3 dark:bg-slate-900/50 dark:border-slate-800">
-                {[
-                  "Uploading image safely...",
-                  "Extracting printed text elements...",
-                  "Parsing ingredient & chemical matches...",
-                  "Resolving items with RxNorm database..."
-                ].map((step, idx) => {
-                  const isDone = scanStep > idx;
-                  const isCurrent = scanStep === idx;
-                  return (
-                    <div key={idx} className="flex items-center gap-3 text-xs font-semibold">
-                      {isDone ? (
-                        <div className="h-5 w-5 bg-medical-green text-white rounded-full flex items-center justify-center shrink-0">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      ) : isCurrent ? (
-                        <div className="h-5 w-5 border border-primary-blue text-primary-blue rounded-full flex items-center justify-center animate-pulse shrink-0 dark:border-primary-blue-light dark:text-primary-blue-light">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="h-5 w-5 border border-border-app text-text-muted rounded-full flex items-center justify-center shrink-0 dark:border-slate-800">
-                          {idx + 1}
-                        </div>
-                      )}
-                      <span className={`${isDone ? "text-text-primary dark:text-slate-300" : isCurrent ? "text-primary-blue font-bold dark:text-primary-blue-light" : "text-text-muted"}`}>
-                        {step}
-                      </span>
-                    </div>
-                  );
-                })}
+          {capturedImage && (
+            <img src={capturedImage} alt="Captured frame" className="absolute inset-0 h-full w-full object-cover" />
+          )}
+
+          {/* Viewfinder */}
+          {scanState === "streaming" && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
+              <div className="relative h-40 w-64">
+                {(["top-0 left-0 border-l-[3px] border-t-[3px] rounded-tl-lg",
+                   "top-0 right-0 border-r-[3px] border-t-[3px] rounded-tr-lg",
+                   "bottom-0 left-0 border-l-[3px] border-b-[3px] rounded-bl-lg",
+                   "bottom-0 right-0 border-r-[3px] border-b-[3px] rounded-br-lg"] as const).map((corner, i) => (
+                  <div key={i} className={`absolute h-7 w-7 border-white ${corner}`} />
+                ))}
+                <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-medical-green shadow-[0_0_16px_rgba(76,209,55,0.9)] animate-scan-line" />
+              </div>
+              <div className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-medical-green opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-medical-green" />
+                </span>
+                <p className="text-xs font-semibold text-white/90">Hold steady — auto-detecting</p>
               </div>
             </div>
           )}
 
-          {/* STEP 2: DISPLAY RESULTS */}
-          {!isScanning && (scanResults.length > 0 || unresolvedDrugs.length > 0) && (
-            <div className="space-y-4">
-              <div className="bg-primary-blue/5 border border-primary-blue/10 dark:bg-primary-blue/10 dark:border-primary-blue/20 rounded-2xl p-4 flex gap-3 items-center">
-                <Sparkles className="h-5 w-5 text-primary-blue dark:text-primary-blue-light shrink-0" />
-                <p className="text-xs font-semibold text-text-secondary dark:text-slate-300 leading-relaxed">
-                  We identified the following medications from your scan. Check the medications you want to add to your combination checker.
-                </p>
-              </div>
-
-              {scanResults.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                    Resolved Medications ({scanResults.length})
-                  </h4>
-                  <div className="border border-border-app rounded-2xl overflow-hidden divide-y divide-border-app bg-surface-app/30 dark:border-slate-800 dark:divide-slate-800">
-                    {scanResults.map((drug) => (
-                      <label
-                        key={drug.rxcui}
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-app transition duration-150 select-none"
-                      >
-                        <div className="flex items-center gap-3 pr-4">
-                          <input
-                            type="checkbox"
-                            checked={!!selectedResults[drug.rxcui]}
-                            onChange={() => toggleSelectDrug(drug.rxcui)}
-                            className="h-4.5 w-4.5 rounded border-gray-300 text-primary-blue focus:ring-primary-blue cursor-pointer"
-                          />
-                          <div>
-                            <span className="block text-sm font-extrabold text-text-primary dark:text-white leading-tight">
-                              {drug.name}
-                            </span>
-                            {drug.synonym && (
-                              <span className="block text-xs text-text-muted mt-0.5">
-                                {drug.synonym}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-primary-blue bg-primary-blue/10 px-2 py-0.5 rounded-md dark:bg-primary-blue/20 dark:text-primary-blue-light shrink-0">
-                          RxCUI: {drug.rxcui}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {unresolvedDrugs.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                    Unrecognized or Ingredient Matches ({unresolvedDrugs.length})
-                  </h4>
-                  <div className="bg-yellow-500/5 border border-yellow-500/10 rounded-2xl p-4 space-y-2 dark:bg-yellow-950/10 dark:border-yellow-900/25">
-                    <div className="flex gap-2 text-warning-orange">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span className="text-xs font-bold">Additional safety info</span>
-                    </div>
-                    <p className="text-[11px] font-semibold text-text-muted leading-relaxed">
-                      We detected some ingredients that aren't matching exact products in our database. You might want to search for these manually:
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {unresolvedDrugs.map((name, i) => (
-                        <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-350">
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="flex-1 rounded-2xl border border-border-app py-3 text-sm font-bold text-text-secondary hover:bg-surface-app transition duration-200 cursor-pointer dark:border-slate-800"
-                >
-                  Scan Another Image
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddSelected}
-                  className="flex-1 rounded-2xl bg-primary-blue text-white py-3 text-sm font-bold hover:bg-primary-blue-dark transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-primary-blue/15"
-                >
-                  <Check className="h-4 w-4" /> Add Selected Drugs
-                </button>
-              </div>
+          {/* Loading overlay */}
+          {isProcessing && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900/75">
+              <Loader2 className="h-9 w-9 animate-spin text-white" />
+              <p className="text-sm font-semibold text-white">
+                {scanState === "loading-camera" ? "Starting camera…" : "Identifying medication…"}
+              </p>
             </div>
           )}
 
-          {/* STEP 3: SCAN INITIATION (CAMERA OR UPLOAD) */}
-          {!isScanning && scanResults.length === 0 && unresolvedDrugs.length === 0 && (
-            <div className="space-y-4">
-              {/* Tab Selector */}
-              <div className="flex p-1 bg-surface-app border border-border-app/40 rounded-2xl dark:bg-slate-900/50 dark:border-slate-850">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("camera")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer ${
-                    activeTab === "camera"
-                      ? "bg-white text-primary-blue shadow dark:bg-slate-800 dark:text-primary-blue-light"
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  <Camera className="h-4 w-4" /> Use Device Camera
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("upload")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer ${
-                    activeTab === "upload"
-                      ? "bg-white text-primary-blue shadow dark:bg-slate-800 dark:text-primary-blue-light"
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                >
-                  <UploadCloud className="h-4 w-4" /> Upload Label Photo
-                </button>
-              </div>
-
-              {/* CAMERA TAB VIEW */}
-              {activeTab === "camera" && (
-                <div className="space-y-4">
-                  {cameraError ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-6 border border-dashed border-border-app rounded-3xl text-center space-y-4 dark:border-slate-800">
-                      <div className="bg-red-500/10 text-red-500 rounded-2xl p-3">
-                        <AlertCircle className="h-6 w-6" />
-                      </div>
-                      <p className="text-xs font-semibold text-text-secondary max-w-sm">
-                        {cameraError}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("upload")}
-                        className="rounded-xl bg-primary-blue text-white px-5 py-2.5 text-xs font-bold hover:bg-primary-blue-dark transition cursor-pointer"
-                      >
-                        Upload a file instead
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="relative overflow-hidden rounded-3xl border border-border-app bg-black aspect-video flex items-center justify-center dark:border-slate-800">
-                      
-                      {/* Video element */}
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-
-                      {/* Viewfinder overlay */}
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center border-[20px] border-black/40">
-                        <div className="relative w-64 h-48 border-2 border-dashed border-primary-blue-light/75 rounded-2xl flex items-center justify-center">
-                          {/* Corner highlights */}
-                          <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary-blue rounded-tl-lg" />
-                          <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary-blue rounded-tr-lg" />
-                          <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary-blue rounded-bl-lg" />
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary-blue rounded-br-lg" />
-                          
-                          {/* Scanning Neon Line laser animation */}
-                          <div className="absolute left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary-blue to-transparent shadow-lg shadow-primary-blue animate-scan-laser" />
-                        </div>
-                      </div>
-
-                      {isCameraLoading && (
-                        <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center space-y-3">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary-blue dark:text-primary-blue-light" />
-                          <p className="text-xs font-semibold text-white">Opening camera stream...</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!cameraError && !isCameraLoading && (
-                    <button
-                      type="button"
-                      onClick={capturePhoto}
-                      className="w-full rounded-2xl bg-primary-blue text-white py-3.5 text-sm font-bold hover:bg-primary-blue-dark transition duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-primary-blue/15"
-                    >
-                      <Camera className="h-5 w-5" /> Take Picture & Scan Label
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* UPLOAD TAB VIEW */}
-              {activeTab === "upload" && (
-                <div className="space-y-4">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center justify-center py-16 px-6 border-2 border-dashed border-border-app hover:border-primary-blue dark:border-slate-800 dark:hover:border-primary-blue-light rounded-3xl text-center space-y-4 cursor-pointer hover:bg-surface-app/30 transition duration-200"
-                  >
-                    <div className="bg-primary-blue/5 text-primary-blue rounded-2xl p-4 dark:bg-primary-blue/10 dark:text-primary-blue-light">
-                      <UploadCloud className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-extrabold text-text-primary dark:text-white">
-                        Click or Drag Prescription Label Photo Here
-                      </p>
-                      <p className="text-xs text-text-muted mt-1">
-                        Supports PNG, JPG or JPEG up to 10MB
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Disclaimer */}
-              <div className="flex gap-2 p-3 bg-slate-50 dark:bg-slate-800/40 border border-border-app dark:border-slate-850 rounded-xl items-start">
-                <AlertCircle className="h-4.5 w-4.5 text-text-muted shrink-0 mt-0.5" />
-                <p className="text-[10px] font-semibold text-text-muted leading-relaxed">
-                  Scanning works best when label names are clear and well-lit. We will verify scanned medications against our database. Always double-check results before submitting.
-                </p>
-              </div>
-
+          {/* Error overlay (no captured image) */}
+          {scanState === "error" && !capturedImage && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+              <AlertTriangle className="h-10 w-10 text-warning-orange" />
+              <p className="text-sm font-semibold text-white">{errorMsg}</p>
             </div>
           )}
-
         </div>
 
-        {/* Canvas for rendering frames invisibly */}
         <canvas ref={canvasRef} className="hidden" />
 
+        {/* Bottom panel */}
+        <div className="px-5 py-5">
+          {/* Detection labels */}
+          {scanState === "result" && (
+            <div className="mb-4">
+              <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
+                {detectedBrand && (
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-muted">
+                    Brand: <span className="font-black normal-case tracking-normal text-primary-blue">{detectedBrand}</span>
+                  </p>
+                )}
+                {detectedGeneric && (
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-text-muted">
+                    Ingredient: <span className="font-black normal-case tracking-normal text-text-primary">{detectedGeneric}</span>
+                  </p>
+                )}
+              </div>
+              {searchedBy === "generic" && searchResults.length > 0 && (
+                <p className="mb-2 text-[10px] italic text-text-muted">Matched by active ingredient</p>
+              )}
+
+              {searchResults.length > 0 ? (
+                <div className="max-h-52 space-y-2 overflow-y-auto">
+                  {searchResults.map((drug) => (
+                    <button
+                      key={drug.rxcui}
+                      type="button"
+                      onClick={() => handleSelect(drug)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-border-app bg-surface-app px-4 py-3 text-left transition hover:border-primary-blue/40 hover:bg-primary-blue/5 active:scale-[0.98]"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-blue/10 text-base">💊</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-text-primary">{drug.name}</p>
+                        {drug.aliases && drug.aliases.length > 0 && (
+                          <p className="truncate text-xs font-medium text-text-muted">{drug.aliases.slice(0, 3).join(", ")}</p>
+                        )}
+                      </div>
+                      <Check className="h-4 w-4 shrink-0 text-primary-blue" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-surface-app p-4 text-sm font-medium text-text-secondary">
+                  No database match for <strong>{detectedBrand || detectedGeneric}</strong>.
+                  <span className="mt-1 block text-xs text-text-muted">Close this and search manually by the generic name.</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Error (with captured image) */}
+          {scanState === "error" && capturedImage && (
+            <p className="mb-4 rounded-2xl border border-danger-red/20 bg-danger-red/5 px-4 py-3 text-sm font-semibold text-danger-red">
+              {errorMsg}
+            </p>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            {scanState === "streaming" && (
+              <>
+                <Button variant="secondary" onClick={handleClose} className="flex-1 py-3">Cancel</Button>
+                <Button onClick={captureManually} className="flex-1 py-3">
+                  <Camera className="h-4 w-4" /> Capture
+                </Button>
+              </>
+            )}
+            {(scanState === "result" || scanState === "error") && (
+              <Button variant="secondary" onClick={handleRetry} className="flex-1 py-3">
+                <RefreshCw className="h-4 w-4" /> Try again
+              </Button>
+            )}
+            {(scanState === "loading-camera" || scanState === "processing") && (
+              <Button variant="secondary" onClick={handleClose} className="flex-1 py-3" disabled={scanState === "processing"}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

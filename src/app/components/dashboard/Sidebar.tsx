@@ -1,155 +1,165 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   History,
   LayoutDashboard,
   LogOut,
+  ScanLine,
+  ShieldPlus,
   User,
-  ChevronRight,
   X,
-  Sun,
-  Moon,
 } from "lucide-react";
-import { useAuth } from "@/app/components/auth/AuthContext";
 import Logo from "@/app/components/ui/Logo";
-import { useTheme } from "@/app/components/ui/ThemeProvider";
+import Button from "@/app/components/ui/Button";
+import { useAuth } from "@/app/components/auth/AuthContext";
+
+const navItems = [
+  { href: "/dashboard", label: "Medication check", icon: LayoutDashboard },
+  { href: "/dashboard/history", label: "History", icon: History },
+  { href: "/dashboard/report", label: "Clinical reports", icon: ClipboardList },
+  { href: "/dashboard/profile", label: "Profile", icon: User },
+];
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
-const navItems = [
-  { href: "/dashboard", label: "Checker Portal", icon: LayoutDashboard },
-  { href: "/dashboard/history", label: "Check History", icon: History },
-  { href: "/dashboard/report", label: "Clinical Reports", icon: ClipboardList },
-  { href: "/dashboard/profile", label: "Profile & Settings", icon: User },
-];
-
-export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen = false, onClose, isCollapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "U";
-
-  const handleSignOut = async () => {
-    if (onClose) onClose();
-    await logout();
-  };
+  const { logout } = useAuth();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <>
-      {/* Mobile dark backdrop overlay */}
+      {/* Mobile backdrop */}
       {isOpen && (
-        <div
+        <button
+          aria-label="Close navigation"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm md:hidden"
         />
       )}
 
-      {/* Sidebar drawer container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border-app bg-card-app transition-colors duration-300 md:static md:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border-app bg-white transition-all duration-300 md:static md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} w-[290px] ${isCollapsed ? "md:w-[72px]" : "md:w-[290px]"}`}
       >
-        {/* Brand logo & Close button */}
-        <div className="flex h-20 items-center justify-between border-b border-border-app/50 px-6 dark:border-slate-800/50">
-          <Logo href="/dashboard" showTagline={false} />
+        {/* Header */}
+        <div className="flex h-24 items-center justify-between border-b border-border-app px-4">
+          {/* Logo: always full on mobile, icon-only when collapsed on desktop */}
+          <div className="md:hidden">
+            <Logo href="/dashboard" showTagline={false} />
+          </div>
+          <div className="hidden md:block">
+            {isCollapsed ? (
+              <ShieldPlus className="h-7 w-7 text-primary-blue" />
+            ) : (
+              <Logo href="/dashboard" showTagline={false} />
+            )}
+          </div>
 
-          {/* Mobile close toggle button */}
-          {onClose && (
+          {/* Controls */}
+          <div className="flex items-center gap-2">
+            {/* Mobile close */}
             <button
               onClick={onClose}
-              className="rounded-xl border border-border-app p-2 text-text-muted hover:bg-surface-app hover:text-text-primary md:hidden cursor-pointer dark:border-slate-800"
-              aria-label="Close Menu"
+              className="rounded-2xl border border-border-app p-2 text-text-muted md:hidden"
+              aria-label="Close menu"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
-          )}
+            {/* Desktop collapse toggle */}
+            <button
+              onClick={onToggle}
+              className="hidden md:flex h-8 w-8 items-center justify-center rounded-xl border border-border-app text-text-muted hover:bg-surface-app hover:text-text-primary transition"
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Navigation items list */}
-        <nav className="flex-1 space-y-1.5 p-4">
+        {/* Navigation */}
+        <nav className={`mt-6 flex-1 space-y-1 ${isCollapsed ? "px-3" : "px-4"}`}>
           {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
-
+            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`group flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                  isActive
-                    ? "bg-primary-blue/10 text-primary-blue shadow-sm shadow-primary-blue/5 dark:bg-primary-blue/20 dark:text-primary-blue-light"
-                    : "text-text-secondary hover:bg-surface-app hover:text-text-primary"
-                }`}
+                title={isCollapsed ? item.label : undefined}
+                className={`flex items-center gap-3 rounded-2xl py-3 text-sm font-bold transition ${isCollapsed ? "justify-center px-3" : "px-4"} ${active ? "bg-primary-blue text-white shadow-soft" : "text-text-secondary hover:bg-surface-app hover:text-text-primary"}`}
               >
-                <div className="flex items-center gap-3">
-                  <item.icon className={`h-4.5 w-4.5 transition-colors duration-200 ${
-                    isActive ? "text-primary-blue dark:text-primary-blue-light" : "text-text-muted group-hover:text-text-secondary"
-                  }`} />
-                  <span>{item.label}</span>
-                </div>
-                {isActive && (
-                  <ChevronRight className="h-4 w-4 text-primary-blue dark:text-primary-blue-light" />
-                )}
+                <item.icon className="h-5 w-5 shrink-0" />
+                {!isCollapsed && item.label}
               </Link>
             );
           })}
         </nav>
 
-        {/* User profile card & Log out */}
-        <div className="border-t border-border-app/50 p-4 space-y-3 dark:border-slate-800/50">
-          {/* Theme switcher */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-app border border-border-app/30 dark:bg-slate-900/40 dark:border-slate-850">
-            <span className="text-xs font-bold text-text-secondary">App Theme</span>
-            <button
-              onClick={toggleTheme}
-              className="rounded-lg border border-border-app p-1.5 text-text-secondary hover:bg-bg-app hover:text-text-primary transition duration-200 cursor-pointer dark:border-slate-700 dark:hover:bg-slate-800"
-              aria-label="Toggle Theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-3.5 w-3.5 text-yellow-500" />
-              ) : (
-                <Moon className="h-3.5 w-3.5 text-slate-500" />
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-xl bg-surface-app p-3 dark:bg-slate-900/20">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-blue text-white font-bold text-sm shrink-0">
-              {initials}
+        {/* Footer */}
+        <div className="border-t border-border-app p-4">
+          {!isCollapsed && (
+            <div className="mb-3 rounded-[24px] bg-surface-app p-4">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-primary-blue">
+                <ScanLine className="h-4 w-4" />
+                Scan-ready workspace
+              </div>
+              <p className="mt-2 text-xs font-medium leading-5 text-text-secondary">
+                Camera, barcode, and OCR flows are prepared for medication labels.
+              </p>
             </div>
-            <div className="overflow-hidden">
-              <h4 className="text-xs font-bold text-text-primary truncate">{user?.name || "User"}</h4>
-              <p className="text-[10px] text-text-muted truncate">{user?.email || "loading..."}</p>
-            </div>
-          </div>
-
+          )}
           <button
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-xs font-bold text-text-secondary hover:bg-danger-red/10 hover:text-danger-red transition duration-200 text-left border-0 bg-transparent cursor-pointer"
+            onClick={() => setLogoutOpen(true)}
+            title={isCollapsed ? "Sign out" : undefined}
+            className={`flex w-full items-center gap-3 rounded-2xl py-3 text-sm font-bold text-text-secondary transition hover:bg-danger-red/10 hover:text-danger-red ${isCollapsed ? "justify-center px-3" : "px-4"}`}
           >
-            <LogOut className="h-4 w-4" />
-            Sign Out
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!isCollapsed && "Sign out"}
           </button>
         </div>
       </aside>
+
+      {/* Logout confirmation modal */}
+      {logoutOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[34px] border border-border-app bg-white p-7 shadow-premium">
+            <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-danger-red/10 mx-auto">
+              <LogOut className="h-6 w-6 text-danger-red" />
+            </div>
+            <h3 className="mt-5 text-center text-xl font-black text-text-primary">Sign out?</h3>
+            <p className="mt-2 text-center text-sm font-medium text-text-secondary">
+              You will be returned to the login page. Your history and reports are saved to your account.
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <Button
+                variant="danger"
+                onClick={() => { setLogoutOpen(false); logout(); }}
+                className="w-full py-3"
+              >
+                Yes, sign out
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setLogoutOpen(false)}
+                className="w-full py-3"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

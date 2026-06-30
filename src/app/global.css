@@ -1,52 +1,11 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
-  --animate-pulse-slow: pulse-slow 12s ease-in-out infinite;
-  --animate-float: float 8s ease-in-out infinite;
-  --animate-float-delayed: float 8s ease-in-out infinite 4s;
-  --animate-glow: glow 4s ease-in-out infinite alternate;
-  --animate-scan-laser: scan-laser 2.5s ease-in-out infinite;
-
-  @keyframes scan-laser {
-    0%, 100% { top: 0%; opacity: 0.3; }
-    50% { top: 100%; opacity: 1; }
-  }
-
-  @keyframes pulse-slow {
-    0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.2; }
-    50% { transform: scale(1.15) translate(4%, 3%); opacity: 0.35; }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-12px) rotate(1deg); }
-  }
-  @keyframes glow {
-    0% { box-shadow: 0 0 10px rgba(20, 40, 160, 0.1), 0 0 20px rgba(20, 40, 160, 0.05); }
-    100% { box-shadow: 0 0 25px rgba(20, 40, 160, 0.25), 0 0 40px rgba(20, 40, 160, 0.15); }
-  }
-
-  /* Primary Colors */
   --color-primary-blue: #1428A0;
   --color-primary-blue-light: #3046D3;
-  --color-primary-blue-dark: #0D1B6E;
   --color-medical-green: #4CD137;
-  --color-medical-green-light: #7BED6A;
-  --color-medical-green-dark: #2BAE1A;
-  --color-danger-red: #FF0000;
-  --color-danger-red-light: #FF4D4F;
-  --color-danger-red-dark: #CC0000;
   --color-warning-orange: #F59E0B;
-
-  /* Severity Colors */
-  --color-severity-safe: #4CD137;
-  --color-severity-low: #22C55E;
-  --color-severity-moderate: #F59E0B;
-  --color-severity-high: #FF0000;
-  --color-severity-critical: #7F1D1D;
-
-  /* Theme variables default definitions (Light Theme) */
+  --color-danger-red: #FF0000;
   --color-bg-app: #FFFFFF;
   --color-surface-app: #F8FAFC;
   --color-border-app: #E2E8F0;
@@ -54,45 +13,20 @@
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-text-muted: #94A3B8;
-
-  /* Additional Colors */
-  --color-info-blue: #3B82F6;
-  --color-success-green: #10B981;
-  --color-purple-accent: #7C3AED;
-  --color-purple-light: #A78BFA;
-  --color-cyan-accent: #06B6D4;
-  --color-yellow-alert: #FACC15;
-
-  /* Gray Scale overrides */
-  --color-gray-50: #F8FAFC;
-  --color-gray-100: #F1F5F9;
-  --color-gray-200: #E2E8F0;
-  --color-gray-300: #CBD5E1;
-  --color-gray-400: #94A3B8;
-  --color-gray-500: #64748B;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1E293B;
-  --color-gray-900: #0F172A;
+  --color-severity-low: #4CD137;
+  --color-severity-moderate: #F59E0B;
+  --color-severity-high: #FF0000;
+  --shadow-premium: 0 24px 70px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 12px 35px rgba(15, 23, 42, 0.06);
 }
 
 :root {
-  --background: var(--color-bg-app);
-  --foreground: var(--color-text-primary);
+  --background: #FFFFFF;
+  --foreground: #0F172A;
 }
 
-.dark {
-  /* Override theme variables for Dark Theme */
-  --color-bg-app: #0F172A;
-  --color-surface-app: #1E293B;
-  --color-border-app: #334155;
-  --color-card-app: #1E293B;
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #CBD5E1;
-  --color-text-muted: #94A3B8;
-
-  --background: var(--color-bg-app);
-  --foreground: var(--color-text-primary);
+* {
+  box-sizing: border-box;
 }
 
 html {
@@ -100,16 +34,68 @@ html {
 }
 
 body {
+  min-height: 100vh;
+  overflow-x: hidden;
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  overflow-x: hidden;
+  font-family: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-/* Custom background mesh */
-.bg-mesh-pattern {
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(20, 40, 160, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 0%, rgba(76, 209, 55, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(124, 58, 237, 0.05) 0px, transparent 50%);
-}
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(48, 70, 211, 0.28);
+  outline-offset: 2px;
+}
+
+.page-shell {
+  margin-inline: auto;
+  width: min(1180px, calc(100% - 32px));
+}
+
+.medical-grid {
+  background-image:
+    linear-gradient(rgba(226, 232, 240, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(226, 232, 240, 0.5) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+.soft-blue-panel {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(48, 70, 211, 0.12), transparent 30%),
+    radial-gradient(circle at 90% 20%, rgba(76, 209, 55, 0.12), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-10%); opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { transform: translateY(440%); opacity: 0; }
+}
+
+.animate-float-gentle {
+  animation: float-gentle 6s ease-in-out infinite;
+}
+
+.animate-scan-line {
+  animation: scan-line 2.4s ease-in-out infinite;
+}

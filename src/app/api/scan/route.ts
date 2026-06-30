@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-// A dictionary of common medications to match against filename or simple simulated OCR
+// A dictionary of common medications to match against filenames when OCR is unavailable.
 const COMMON_DRUGS = [
   "Aspirin", "Ibuprofen", "Warfarin", "Metformin", "Lisinopril", 
   "Simvastatin", "Levothyroxine", "Albuterol", "Amlodipine", 
@@ -70,8 +70,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback logic for local development or API failure
-    // Check if filename contains any common drug names
+    // Fallback logic for local development or API failure.
     const detectedDrugs: string[] = [];
     if (filename) {
       const lowerFile = filename.toLowerCase();
@@ -82,29 +81,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // If still empty, simulate/mock scan by picking 1-2 drugs based on simple hash of image length to show a working flow
-    if (detectedDrugs.length === 0) {
-      const hash = image.length % COMMON_DRUGS.length;
-      const drug1 = COMMON_DRUGS[hash];
-      const drug2 = COMMON_DRUGS[(hash + 3) % COMMON_DRUGS.length];
-      detectedDrugs.push(drug1, drug2);
-    }
-
-    // Simulate network delay for realistic feel
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
     return NextResponse.json({
       success: true,
       data: {
         drugs: detectedDrugs,
-        source: "mock-ocr"
+        source: detectedDrugs.length ? "filename-match" : "not-detected"
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in scan API:", error);
+    const message = error instanceof Error ? error.message : "Failed to process image scan";
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to process image scan" },
+      { success: false, message },
       { status: 500 }
     );
   }

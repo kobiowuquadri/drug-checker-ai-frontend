@@ -1,141 +1,63 @@
 "use client";
 
-import { FormEvent, useState, useEffect } from "react";
-import { toast } from "sonner";
-import { User, ShieldCheck, Mail, Key } from "lucide-react";
+import Image from "next/image";
+import { LogOut, Mail, ShieldCheck, UserRound } from "lucide-react";
 import DashboardHeader from "@/app/components/dashboard/DashboardHeader";
 import Button from "@/app/components/ui/Button";
 import Card from "@/app/components/ui/Card";
-import Input from "@/app/components/ui/Input";
-import { useAuth, getAuthHeaders } from "@/app/components/auth/AuthContext";
+import { useAuth } from "@/app/components/auth/AuthContext";
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setEmail(user.email);
-    }
-  }, [user]);
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "U";
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/users/profile", {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name, email }),
-      });
-      
-      if (response.ok) {
-        toast.success("Profile updated successfully!");
-        await refreshUser();
-      } else {
-        // Fallback for custom backend implementation if PUT profile is not supported
-        toast.success("Profile changes saved successfully.");
-      }
-    } catch (error) {
-      toast.success("Profile changes saved successfully.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const { user, logout, refreshUser } = useAuth();
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <DashboardHeader
-        title="Profile Settings"
-        description="Manage your account information and check preference controls."
-      />
+    <div>
+      <DashboardHeader title="Profile and account" description="Review your secure account profile and session settings." />
+      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <Card className="p-8 text-center">
+          <div className="mx-auto h-28 w-28 overflow-hidden rounded-[32px] shadow-soft ring-4 ring-primary-blue/10">
+            <Image
+              src="/image/rian-ramirez-rm7rZYdl3rY-unsplash.jpg"
+              alt="Profile photo"
+              width={112}
+              height={112}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <h2 className="mt-5 text-2xl font-black">{user?.name || "User"}</h2>
+          <p className="mt-1 text-sm font-medium text-text-secondary">{user?.email || "Loading profile..."}</p>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-medical-green/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-medical-green">
+            <ShieldCheck className="h-4 w-4" />
+            Cookie-secured session
+          </div>
+        </Card>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Left Side: General Profile Status card */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card className="text-center p-6 border-border-app bg-card-app dark:border-slate-800 transition-colors">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary-blue/10 text-primary-blue font-extrabold text-2xl border-4 border-white dark:border-slate-800 shadow-md select-none shrink-0">
-              {initials}
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-xl font-black">Profile information</h3>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-3xl border border-border-app bg-surface-app p-4">
+                <UserRound className="h-5 w-5 text-primary-blue" />
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-text-muted">Full name</p>
+                <p className="mt-1 text-sm font-black text-text-primary">{user?.name || "Not available"}</p>
+              </div>
+              <div className="rounded-3xl border border-border-app bg-surface-app p-4">
+                <Mail className="h-5 w-5 text-primary-blue" />
+                <p className="mt-3 text-xs font-bold uppercase tracking-wide text-text-muted">Email address</p>
+                <p className="mt-1 text-sm font-black text-text-primary">{user?.email || "Not available"}</p>
+              </div>
             </div>
-            <h3 className="mt-4 font-bold text-text-primary text-base">{name || user?.name || "Loading..."}</h3>
-            <p className="text-xs text-text-muted font-medium">{email || user?.email || "Loading..."}</p>
-            <div className="mt-6 inline-flex items-center gap-1 rounded-full bg-medical-green/10 px-3 py-1 text-[10px] font-bold text-medical-green uppercase tracking-wider">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Verified Account
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={refreshUser}>Refresh profile</Button>
+              <Button variant="danger" onClick={logout}><LogOut className="h-4 w-4" /> Sign out</Button>
             </div>
           </Card>
-        </div>
 
-        {/* Right Side: Settings inputs form */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card padding="lg" className="border-border-app bg-card-app dark:border-slate-800 transition-colors">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="border-b border-border-app dark:border-slate-850 pb-4 mb-4">
-                <h3 className="font-extrabold text-text-primary text-sm md:text-base">Personal Information</h3>
-                <p className="text-xs text-text-muted">Update your dashboard display credentials.</p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Full Name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="border-border-app focus:border-primary-blue dark:border-slate-700 dark:focus:border-primary-blue-light"
-                  required
-                  disabled={isSubmitting}
-                />
-                <Input
-                  label="Email Address"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="border-border-app focus:border-primary-blue dark:border-slate-700 dark:focus:border-primary-blue-light"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="border-b border-border-app dark:border-slate-850 pb-4 pt-4 mb-4">
-                <h3 className="font-extrabold text-text-primary text-sm md:text-base">Security (Demo Only)</h3>
-                <p className="text-xs text-text-muted">Manage password details.</p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Current Password"
-                  type="password"
-                  placeholder="••••••••"
-                  disabled={isSubmitting}
-                  className="border-border-app focus:border-primary-blue dark:border-slate-700 dark:focus:border-primary-blue-light"
-                />
-                <Input
-                  label="New Password"
-                  type="password"
-                  placeholder="Leave blank to keep same"
-                  disabled={isSubmitting}
-                  className="border-border-app focus:border-primary-blue dark:border-slate-700 dark:focus:border-primary-blue-light"
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving changes..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
+          <Card className="p-6">
+            <h3 className="text-xl font-black">Account settings</h3>
+            <p className="mt-2 text-sm font-medium leading-6 text-text-secondary">
+              Profile editing, password changes, and email verification are prepared in the UI roadmap. The current backend exposes read-only profile data plus cookie-based authentication endpoints.
+            </p>
           </Card>
         </div>
       </div>

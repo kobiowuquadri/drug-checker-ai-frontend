@@ -9,11 +9,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-blue text-white hover:bg-primary-blue-light focus-visible:ring-primary-blue-light transition-colors",
+    "bg-primary-blue text-white shadow-soft hover:bg-primary-blue-light",
   secondary:
-    "border border-border-app bg-bg-app text-text-secondary hover:bg-surface-app hover:text-text-primary hover:border-text-secondary/35 focus-visible:ring-primary-blue transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:border-slate-500",
-  ghost: "text-text-secondary hover:bg-surface-app hover:text-text-primary transition-colors dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
-  danger: "bg-danger-red text-white hover:bg-danger-red-dark focus-visible:ring-danger-red transition-colors",
+    "border border-border-app bg-white text-text-secondary hover:border-primary-blue/30 hover:bg-surface-app hover:text-text-primary",
+  ghost: "text-text-secondary hover:bg-surface-app hover:text-text-primary",
+  danger: "bg-danger-red text-white shadow-soft hover:bg-red-700",
 };
 
 export default function Button({
@@ -26,7 +26,7 @@ export default function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition duration-200 disabled:cursor-not-allowed disabled:opacity-55 ${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
       disabled={disabled}
       {...props}
     >
