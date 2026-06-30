@@ -50,11 +50,15 @@ async function findDrugs(brand: string, generic: string) {
   return { results, usedKey };
 }
 
-function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetW: number, quality = 0.84) {
-  const scale = Math.min(1, targetW / (video.videoWidth || targetW));
-  canvas.width = Math.round((video.videoWidth || targetW) * scale);
-  canvas.height = Math.round((video.videoHeight || 600) * scale);
-  canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetW: number, quality = 0.84): string | null {
+  // Don't capture if video hasn't received frames yet — would produce a black image
+  if (!video.videoWidth || !video.videoHeight || video.readyState < 2) return null;
+  const scale = Math.min(1, targetW / video.videoWidth);
+  canvas.width = Math.round(video.videoWidth * scale);
+  canvas.height = Math.round(video.videoHeight * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", quality);
 }
 
@@ -111,16 +115,22 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
         .catch(() => navigator.mediaDevices.getUserMedia({ video: true }));
 
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        // Wait for metadata so videoWidth/videoHeight are available
+        await new Promise<void>((resolve) => {
+          if (video.readyState >= 1) { resolve(); return; }
+          video.onloadedmetadata = () => resolve();
+        });
+        await video.play();
       }
       setState("streaming");
 
-      // Auto-detect: 2 s warmup, then scan every 2.5 s
+      // Auto-detect: 3 s warmup (camera needs time to focus/expose), then scan every 3 s
       autoTimerRef.current = window.setTimeout(() => {
-        autoIntervalRef.current = window.setInterval(runAutoScan, 2500);
-      }, 2000);
+        autoIntervalRef.current = window.setInterval(runAutoScan, 3000);
+      }, 3000);
     } catch {
       setState("error");
       setErrorMsg("Camera access was denied. Please allow camera access in your browser settings.");
@@ -169,7 +179,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
 
     busyRef.current = true;
     try {
-      const dataUrl = captureFrame(video, canvas, 800, 0.84);
+      const dataUrl = captureFrame(video, canvas, 960, 0.88);
+      if (!dataUrl) return; // video not ready yet — skip this cycle
+
       const { brand, generic } = await geminiScan(dataUrl);
 
       const brandValid = brand !== "UNKNOWN" && brand.length >= 4;
@@ -179,7 +191,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
         await presentResult(dataUrl, brand, generic);
       }
     } catch {
-      // silent — keep trying
+      // silent — keep trying on next interval
     } finally {
       busyRef.current = false;
     }
@@ -192,8 +204,14 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
     const canvas = canvasRef.current;
     if (!video || !canvas || stateRef.current !== "streaming") return;
 
-    const dataUrl = captureFrame(video, canvas, 960, 0.88);
+    const dataUrl = captureFrame(video, canvas, 960, 0.90);
     clearAuto();
+
+    if (!dataUrl) {
+      setState("error");
+      setErrorMsg("Camera not ready. Wait a moment and try again.");
+      return;
+    }
 
     try {
       setState("processing");
