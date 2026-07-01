@@ -67,20 +67,25 @@ export default function HistoryPage() {
   }
 
   useEffect(() => {
-    loadHistory();
+    const timer = window.setTimeout(() => void loadHistory(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!detailId) {
-      setDetail(null);
-      return;
-    }
-    setIsLoadingDetail(true);
-    api.history
-      .detail(detailId)
-      .then((res) => setDetail(res.data))
-      .catch(() => toast.error("Unable to load interaction details."))
-      .finally(() => setIsLoadingDetail(false));
+    const timer = window.setTimeout(() => {
+      if (!detailId) {
+        setDetail(null);
+        return;
+      }
+      setIsLoadingDetail(true);
+      api.history
+        .detail(detailId)
+        .then((res) => setDetail(res.data))
+        .catch(() => toast.error("Unable to load interaction details."))
+        .finally(() => setIsLoadingDetail(false));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [detailId]);
 
   const filtered = useMemo(() => {

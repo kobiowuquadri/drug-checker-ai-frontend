@@ -22,6 +22,7 @@ import {
   FileText,
   Loader2,
   Mic,
+  Pill,
   Plus,
   Search,
   Sparkles,
@@ -54,24 +55,27 @@ function severityVariant(severity?: Severity | null) {
   return "none";
 }
 
-function riskPercentage(severity?: Severity | null) {
+function riskPercentage(severity?: Severity | null, hasResult = false) {
   if (severity === "HIGH") return 88;
   if (severity === "MODERATE") return 58;
   if (severity === "LOW") return 24;
-  return 6;
+  if (hasResult) return 0;
+  return 0;
 }
 
-function severityColor(severity?: Severity | null) {
+function severityColor(severity?: Severity | null, hasResult = false) {
   if (severity === "HIGH") return "bg-danger-red";
   if (severity === "MODERATE") return "bg-warning-orange";
   if (severity === "LOW") return "bg-medical-green";
+  if (hasResult) return "bg-medical-green";
   return "bg-primary-blue/20";
 }
 
-function severityTextColor(severity?: Severity | null) {
+function severityTextColor(severity?: Severity | null, hasResult = false) {
   if (severity === "HIGH") return "text-danger-red";
   if (severity === "MODERATE") return "text-warning-orange";
   if (severity === "LOW") return "text-medical-green";
+  if (hasResult) return "text-medical-green";
   return "text-text-muted";
 }
 
@@ -103,8 +107,8 @@ function AiSummaryBody({ text }: { text?: string | null }) {
               <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-primary-blue">{headerText}</p>
             )}
             {bodyLines.map((line, li) => {
-              const isBullet = /^[-•*]\s/.test(line);
-              const content = isBullet ? line.replace(/^[-•*]\s+/, "") : line;
+              const isBullet = /^[-*]\s/.test(line);
+              const content = isBullet ? line.replace(/^[-*]\s+/, "") : line;
               if (isBullet) {
                 return (
                   <div key={li} className="flex items-start gap-2.5 py-1">
@@ -128,6 +132,7 @@ function AiSummaryBody({ text }: { text?: string | null }) {
 
 function loadRecentSearches(): string[] {
   try {
+    if (typeof window === "undefined") return [];
     return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
   } catch {
     return [];
@@ -149,7 +154,7 @@ export default function DrugChecker() {
   const [suggestions, setSuggestions] = useState<Drug[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [selectedDrugs, setSelectedDrugs] = useState<Drug[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => loadRecentSearches());
   const [isSearching, setIsSearching] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [searchError, setSearchError] = useState("");
@@ -162,19 +167,10 @@ export default function DrugChecker() {
   const [reportNotes, setReportNotes] = useState("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-  // Load recent searches from localStorage on mount
-  useEffect(() => {
-    setRecentSearches(loadRecentSearches());
-  }, []);
-
   // Debounced search
   useEffect(() => {
     const clean = query.trim();
     if (clean.length < 2) {
-      setSuggestions([]);
-      setSearchError("");
-      setActiveIndex(-1);
-      setDropdownOpen(clean.length === 0 ? false : dropdownOpen);
       return;
     }
 
@@ -198,12 +194,15 @@ export default function DrugChecker() {
     }, 280);
 
     return () => window.clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, selectedDrugs]);
 
   const canCheck = selectedDrugs.length >= 2 && selectedDrugs.length <= 5;
   const highestSeverity = result?.safetySummary.highestSeverity ?? null;
-  const risk = riskPercentage(highestSeverity);
+  const hasResult = Boolean(result);
+  const risk = riskPercentage(highestSeverity, hasResult);
+  const riskTitle = !hasResult ? "Awaiting check" : highestSeverity ? `${highestSeverity} risk` : "No verified risk";
+  const riskBadge = !hasResult ? "READY" : highestSeverity || "CLEAR";
+  const riskBadgeVariant = hasResult && !highestSeverity ? "low" : severityVariant(highestSeverity);
 
   const selectDrug = useCallback(
     (drug: Drug) => {
@@ -235,6 +234,17 @@ export default function DrugChecker() {
   function removeDrug(rxcui: string) {
     setSelectedDrugs((prev) => prev.filter((d) => d.rxcui !== rxcui));
     setResult(null);
+  }
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    const clean = value.trim();
+    if (clean.length < 2) {
+      setSuggestions([]);
+      setSearchError("");
+      setActiveIndex(-1);
+      setDropdownOpen(false);
+    }
   }
 
   function handleInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -318,7 +328,7 @@ export default function DrugChecker() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        {/* ── Left column ── */}
+        {/* Left column */}
         <section className="space-y-5">
 
           {/* Search card */}
@@ -328,7 +338,7 @@ export default function DrugChecker() {
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Search medication</p>
                 <h2 className="mt-1.5 text-2xl font-black text-text-primary">Find a medication</h2>
                 <p className="mt-1 text-sm font-medium text-text-secondary">
-                  Search by generic name or brand (Panadol → Paracetamol).
+                  Search by generic name or brand (Panadol to Paracetamol).
                 </p>
               </div>
 
@@ -353,7 +363,7 @@ export default function DrugChecker() {
                 <div className="relative">
                   <button
                     disabled
-                    title="Voice — coming soon"
+                    title="Voice coming soon"
                     className="flex items-center gap-1.5 rounded-2xl border border-border-app bg-surface-app px-3 py-2 text-xs font-bold text-text-muted opacity-60 cursor-not-allowed"
                   >
                     <Mic className="h-3.5 w-3.5" />
@@ -372,21 +382,20 @@ export default function DrugChecker() {
               <input
                 ref={inputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => updateQuery(e.target.value)}
                 onFocus={() => query.trim().length >= 2 && setDropdownOpen(true)}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Search ibuprofen, aspirin, paracetamol..."
                 autoComplete="off"
                 aria-label="Search medications"
                 aria-autocomplete="list"
-                aria-expanded={showDropdown}
                 className="w-full rounded-3xl border border-border-app bg-surface-app py-4 pl-12 pr-12 text-base font-semibold text-text-primary placeholder:font-medium placeholder:text-text-muted focus:border-primary-blue focus:outline-none focus:ring-2 focus:ring-primary-blue/10 transition"
               />
               {isSearching ? (
                 <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary-blue" />
               ) : query ? (
                 <button
-                  onClick={() => { setQuery(""); setSuggestions([]); setDropdownOpen(false); }}
+                  onClick={() => updateQuery("")}
                   className="absolute right-4 top-1/2 -translate-y-1/2 rounded-xl p-1 text-text-muted hover:text-text-primary"
                 >
                   <X className="h-4 w-4" />
@@ -424,8 +433,8 @@ export default function DrugChecker() {
                           onMouseEnter={() => setActiveIndex(idx)}
                           className={`flex w-full items-center gap-4 border-b border-border-app px-5 py-3.5 text-left last:border-b-0 transition-colors ${idx === activeIndex ? "bg-primary-blue/5" : "hover:bg-surface-app"}`}
                         >
-                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-base transition ${idx === activeIndex ? "bg-primary-blue text-white" : "bg-primary-blue/10 text-primary-blue"}`}>
-                            💊
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl transition ${idx === activeIndex ? "bg-primary-blue text-white" : "bg-primary-blue/10 text-primary-blue"}`}>
+                            <Pill className="h-4 w-4" />
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-sm font-black text-text-primary">{drug.name}</span>
@@ -468,7 +477,7 @@ export default function DrugChecker() {
                     {recentSearches.map((name) => (
                       <button
                         key={name}
-                        onClick={() => setQuery(name)}
+                        onClick={() => updateQuery(name)}
                         className="flex items-center gap-1.5 rounded-full border border-border-app bg-white px-3 py-1.5 text-xs font-bold text-text-secondary hover:border-primary-blue/30 hover:text-primary-blue transition"
                       >
                         <Clock className="h-3 w-3 text-text-muted" />
@@ -487,7 +496,7 @@ export default function DrugChecker() {
                   {POPULAR_MEDICATIONS.map((name) => (
                     <button
                       key={name}
-                      onClick={() => setQuery(name)}
+                      onClick={() => updateQuery(name)}
                       className="rounded-full border border-border-app bg-white px-3 py-1.5 text-xs font-bold text-text-secondary hover:border-primary-blue/30 hover:text-primary-blue transition"
                     >
                       {name}
@@ -531,8 +540,8 @@ export default function DrugChecker() {
                     key={drug.rxcui}
                     className="group relative flex items-start gap-3 rounded-[26px] border border-border-app bg-white p-4 shadow-soft transition hover:border-primary-blue/20"
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-blue/10 text-lg">
-                      💊
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-blue/10 text-primary-blue">
+                      <Pill className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="font-black text-text-primary">{drug.name}</p>
@@ -569,59 +578,59 @@ export default function DrugChecker() {
           </Card>
         </section>
 
-        {/* ── Right column ── */}
-        <aside className="space-y-5">
-          <Card padding="lg" className="overflow-hidden">
+        {/* Right column */}
+        <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+          <Card padding="lg" className={`overflow-hidden ${hasResult ? "border-primary-blue/20" : ""}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Risk summary</p>
-                <h2 className={`mt-2 text-2xl font-black ${result ? severityTextColor(highestSeverity) : "text-text-primary"}`}>
-                  {highestSeverity ? `${highestSeverity} risk` : "Awaiting check"}
+                <h2 className={`mt-2 text-2xl font-black ${hasResult ? severityTextColor(highestSeverity, hasResult) : "text-text-primary"}`}>
+                  {riskTitle}
                 </h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-text-secondary">
                   {result?.safetySummary.actionMessage ||
                     "Select at least 2 medications and run a check to see the safety summary."}
                 </p>
               </div>
-              <Badge variant={severityVariant(highestSeverity)}>
-                {highestSeverity || "READY"}
+              <Badge variant={riskBadgeVariant}>
+                {riskBadge}
               </Badge>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-5">
               <div className="flex items-end justify-between">
                 <span className="text-xs font-bold uppercase tracking-wide text-text-muted">Risk indicator</span>
                 <span className="text-4xl font-black text-text-primary">{risk}%</span>
               </div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-app">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${severityColor(highestSeverity)}`}
+                  className={`h-full rounded-full transition-all duration-700 ${severityColor(highestSeverity, hasResult)}`}
                   style={{ width: `${risk}%` }}
                 />
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {statCards.map(({ label, value }) => (
-                <div key={label} className="rounded-3xl border border-border-app bg-surface-app p-4">
-                  <p className="text-xs font-bold text-text-muted">{label}</p>
-                  <p className="mt-1 text-2xl font-black text-text-primary">{value}</p>
+                <div key={label} className="rounded-2xl border border-border-app bg-surface-app p-3">
+                  <p className="text-[10px] font-bold text-text-muted">{label}</p>
+                  <p className="mt-1 text-xl font-black text-text-primary">{value}</p>
                 </div>
               ))}
             </div>
-          </Card>
 
-          {result && (
-            <Card padding="lg">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-primary-blue/10">
-                  <Brain className="h-4 w-4 text-primary-blue" />
-                </span>
-                <h3 className="text-base font-black">AI safety summary</h3>
+            {result && (
+              <div className="mt-5 border-t border-border-app pt-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-primary-blue/10">
+                    <Brain className="h-4 w-4 text-primary-blue" />
+                  </span>
+                  <h3 className="text-base font-black">AI safety summary</h3>
+                </div>
+                <AiSummaryBody text={result.aiSummary} />
               </div>
-              <AiSummaryBody text={result.aiSummary} />
-            </Card>
-          )}
+            )}
+          </Card>
 
           {!result && (
             <Card padding="lg" className="border-dashed bg-surface-app/50">
@@ -631,7 +640,7 @@ export default function DrugChecker() {
               </div>
               <ol className="mt-4 space-y-3 text-sm font-medium text-text-secondary">
                 {[
-                  "Search and select 2–5 generic medications",
+                  "Search and select 2 to 5 generic medications",
                   "Click Check interactions to scan the verified database",
                   "Review severity, clinical effects, and AI explanations",
                   "Optionally save as a clinical report",
@@ -649,7 +658,7 @@ export default function DrugChecker() {
         </aside>
       </div>
 
-      {/* ── Interaction results ── */}
+      {/* Interaction results */}
       {result && (
         <section className="mt-6 space-y-5">
           {/* Duplicate therapy warnings */}
@@ -694,15 +703,15 @@ export default function DrugChecker() {
                     key={`${interaction.drugA.rxcui}-${interaction.drugB.rxcui}`}
                     className="overflow-hidden rounded-[32px] border border-border-app bg-white shadow-soft"
                   >
-                    {/* Header — Drug pair + severity */}
+                    {/* Header: drug pair and severity */}
                     <div className="flex flex-col gap-3 border-b border-border-app bg-surface-app px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2 text-sm font-black text-text-primary shadow-soft">
-                          💊 {interaction.drugA.name}
+                          <Pill className="h-4 w-4 text-primary-blue" /> {interaction.drugA.name}
                         </span>
                         <span className="text-text-muted font-bold">+</span>
                         <span className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-2 text-sm font-black text-text-primary shadow-soft">
-                          💊 {interaction.drugB.name}
+                          <Pill className="h-4 w-4 text-primary-blue" /> {interaction.drugB.name}
                         </span>
                       </div>
                       <div className="flex items-center gap-2.5 shrink-0">
@@ -778,7 +787,7 @@ export default function DrugChecker() {
         </section>
       )}
 
-      {/* ── Generate report modal ── */}
+      {/* Generate report modal */}
       {reportOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/35 backdrop-blur-sm sm:items-center sm:p-4">
           <form onSubmit={generateReport} className="w-full max-w-lg rounded-t-[34px] border border-border-app bg-white p-6 shadow-premium sm:rounded-[34px]">
@@ -822,6 +831,10 @@ export default function DrugChecker() {
         isOpen={barcodeScannerOpen}
         onClose={() => setBarcodeScannerOpen(false)}
         onDrugDetected={(drug) => selectDrug(drug)}
+        onUseCamera={() => {
+          setBarcodeScannerOpen(false);
+          setScannerOpen(true);
+        }}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -49,56 +49,59 @@ function ReportContent() {
   const [error, setError] = useState("");
 
   // Modal state
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const id = Number(searchParams.get("id"));
+    return Number.isFinite(id) && id > 0 ? id : null;
+  });
   const [detail, setDetail] = useState<ReportDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
 
-  // Load the reports list
-  useEffect(() => {
-    setIsLoading(true);
-    setError("");
-    api.reports
-      .list()
-      .then((res) => setReports(res.data))
-      .catch((err) => setError(err instanceof Error ? err.message : "Unable to load reports."))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  // Honour ?id= param on first mount
-  useEffect(() => {
-    const id = searchParams.get("id");
-    if (id) setSelectedId(Number(id));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load detail whenever selectedId changes
-  useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
-    setIsLoadingDetail(true);
-    api.reports
-      .detail(selectedId)
-      .then((res) => setDetail(res.data))
-      .catch(() => {
-        toast.error("Unable to load report.");
-        closeModal();
-      })
-      .finally(() => setIsLoadingDetail(false));
-  }, [selectedId]);
-
-  function openModal(id: number) {
+  const openModal = useCallback((id: number) => {
     setSelectedId(id);
     router.replace(`/dashboard/report?id=${id}`);
-  }
+  }, [router]);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     setSelectedId(null);
     setDetail(null);
     router.replace("/dashboard/report");
-  }
+  }, [router]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsLoading(true);
+      setError("");
+      api.reports
+        .list()
+        .then((res) => setReports(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : "Unable to load reports."))
+        .finally(() => setIsLoading(false));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!selectedId) {
+        setDetail(null);
+        return;
+      }
+      setIsLoadingDetail(true);
+      api.reports
+        .detail(selectedId)
+        .then((res) => setDetail(res.data))
+        .catch(() => {
+          toast.error("Unable to load report.");
+          closeModal();
+        })
+        .finally(() => setIsLoadingDetail(false));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedId, closeModal]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
