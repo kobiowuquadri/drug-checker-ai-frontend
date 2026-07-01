@@ -83,6 +83,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
   const [matchedBy, setMatchedBy] = useState<"brand" | "generic">("brand");
   const [searchResults, setSearchResults] = useState<Drug[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const [manualQuery, setManualQuery] = useState("");
+  const [manualResults, setManualResults] = useState<Drug[]>([]);
+  const [isManualSearching, setIsManualSearching] = useState(false);
 
   const updateState = useCallback((next: ScanState) => {
     stateRef.current = next;
@@ -109,6 +112,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
     setSearchResults([]);
     setErrorMsg("");
     setMatchedBy("brand");
+    setManualQuery("");
+    setManualResults([]);
+    setIsManualSearching(false);
   }, []);
 
   const presentScanResult = useCallback(async (dataUrl: string, brand: string, generic: string) => {
@@ -122,7 +128,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
 
     if (!brandKnown && !genericKnown) {
       updateState("error");
-      setErrorMsg("No medication label was detected. Try better lighting, move closer, or capture the active ingredient area.");
+      setErrorMsg("The scanner could not read the medication name clearly. Search the visible brand or active ingredient below.");
       return;
     }
 
@@ -231,6 +237,27 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
     toast.success(`${drug.name} added to workspace`, { description: "From camera scan" });
     onClose();
   }, [onClose, onDrugDetected, stopCamera]);
+
+  const runManualSearch = useCallback(async () => {
+    const term = manualQuery.trim();
+    if (term.length < 2) {
+      setErrorMsg("Enter at least 2 characters from the brand or active ingredient.");
+      return;
+    }
+
+    setIsManualSearching(true);
+    try {
+      const response = await api.drugs.search(term);
+      setManualResults(response.data.drugs.slice(0, 8));
+      if (response.data.drugs.length === 0) {
+        setErrorMsg("No medication matched that text. Try the generic active ingredient if it is visible.");
+      }
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "Medication search failed.");
+    } finally {
+      setIsManualSearching(false);
+    }
+  }, [manualQuery]);
 
   const handleClose = useCallback(() => {
     stopCamera();
@@ -367,9 +394,55 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
           )}
 
           {scanState === "error" && capturedImage && (
-            <p className="mb-4 rounded-2xl border border-danger-red/20 bg-danger-red/5 px-4 py-3 text-sm font-semibold text-danger-red">
-              {errorMsg}
-            </p>
+            <div className="mb-4 space-y-3">
+              <p className="rounded-2xl border border-warning-orange/20 bg-warning-orange/5 px-4 py-3 text-sm font-semibold text-text-primary">
+                {errorMsg}
+              </p>
+              <div className="rounded-[24px] border border-border-app bg-surface-app p-4">
+                <label className="text-xs font-black uppercase tracking-wide text-text-muted">Search label text</label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={manualQuery}
+                    onChange={(event) => setManualQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void runManualSearch();
+                      }
+                    }}
+                    placeholder="e.g. Synriam, Coartem, Panadol"
+                    className="min-w-0 flex-1 rounded-2xl border border-border-app bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary-blue"
+                  />
+                  <Button type="button" onClick={runManualSearch} disabled={isManualSearching} className="px-4 py-3">
+                    {isManualSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                  </Button>
+                </div>
+
+                {manualResults.length > 0 && (
+                  <div className="mt-3 max-h-44 space-y-2 overflow-y-auto">
+                    {manualResults.map((drug) => (
+                      <button
+                        key={drug.rxcui}
+                        type="button"
+                        onClick={() => handleSelect(drug)}
+                        className="flex w-full items-center gap-3 rounded-2xl border border-border-app bg-white px-4 py-3 text-left transition hover:border-primary-blue/40 hover:bg-primary-blue/5"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-blue/10 text-primary-blue">
+                          <Pill className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-black text-text-primary">{drug.name}</span>
+                          {drug.aliases && drug.aliases.length > 0 && (
+                            <span className="block truncate text-xs font-medium text-text-muted">{drug.aliases.slice(0, 3).join(", ")}</span>
+                          )}
+                        </span>
+                        <Check className="h-4 w-4 shrink-0 text-primary-blue" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           <div className="flex gap-3">
