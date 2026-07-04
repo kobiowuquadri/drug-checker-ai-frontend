@@ -78,8 +78,9 @@ const team = [
     initials: "QK",
   },
   {
-    name: "Heritage Bolanle",
+    name: "Bolatito Heritage",
     role: "Frontend Developer",
+    image: "/image/King.JPEG",
     initials: "HB",
   },
   {
