@@ -80,13 +80,14 @@ const team = [
   {
     name: "Bolatito Heritage",
     role: "Frontend Developer",
-    image: "/image/King.JPEG",
+    image: "/image/King.png",
     initials: "HB",
   },
   {
-    name: "Seyifunmi",
+    name: "Seyifunmi Oduntan",
     role: "Project Manager",
-    initials: "S",
+    image: "/image/Seyi.png",
+    initials: "SO",
   },
 ];
 
