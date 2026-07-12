@@ -70,7 +70,7 @@ export const api = {
       apiRequest<{ query: string; drugs: Drug[] }>(`/drugs/search?q=${encodeURIComponent(query)}`, { method: "GET" }),
     details: (rxcui: string) => apiRequest<Drug>(`/drugs/${encodeURIComponent(rxcui)}`, { method: "GET" }),
     scan: (payload: { image: string; mimeType: string }) =>
-      apiRequest<{ medicationName: string; genericName: string }>("/drugs/scan", { method: "POST", body: payload }),
+      apiRequest<{ medicationName: string; genericName: string; scanSource?: string; ocrText?: string; ocrError?: string }>("/drugs/scan", { method: "POST", body: payload }),
     barcode: (payload: { barcodeValue: string; format?: string }) =>
       apiRequest<{ medicationName: string | null; genericName: string | null; rxcui: string | null; source: string }>("/drugs/barcode", { method: "POST", body: payload }),
   },

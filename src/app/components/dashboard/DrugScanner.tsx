@@ -22,11 +22,13 @@ async function scanImage(dataUrl: string) {
   return {
     brand: response.data.medicationName?.trim() || "UNKNOWN",
     generic: response.data.genericName?.trim() || "UNKNOWN",
+    ocrError: response.data.ocrError,
   };
 }
 
 function isKnownMedicationText(value: string) {
-  return value && value !== "UNKNOWN" && value.length >= 3;
+  const normalized = value.trim().toLowerCase();
+  return Boolean(value) && !["unknown", "json", "brand", "generic", "null", "undefined"].includes(normalized) && normalized.length >= 4;
 }
 
 async function findDrugs(brand: string, generic: string) {
@@ -53,7 +55,7 @@ async function findDrugs(brand: string, generic: string) {
   return { results: results.slice(0, 8), matchedBy };
 }
 
-function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetWidth = 1100) {
+function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetWidth = 1600) {
   if (!video.videoWidth || !video.videoHeight || video.readyState < 2) return null;
 
   const scale = Math.min(1, targetWidth / video.videoWidth);
@@ -64,7 +66,7 @@ function captureFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement, target
   if (!context) return null;
 
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.9);
+  return canvas.toDataURL("image/jpeg", 0.95);
 }
 
 export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugScannerProps) {
@@ -117,7 +119,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
     setIsManualSearching(false);
   }, []);
 
-  const presentScanResult = useCallback(async (dataUrl: string, brand: string, generic: string) => {
+  const presentScanResult = useCallback(async (dataUrl: string, brand: string, generic: string, ocrError?: string) => {
     clearAutoScan();
     stopCamera();
     updateState("processing");
@@ -128,7 +130,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
 
     if (!brandKnown && !genericKnown) {
       updateState("error");
-      setErrorMsg("The scanner could not read the medication name clearly. Search the visible brand or active ingredient below.");
+      setErrorMsg(ocrError || "The scanner could not read the medication name clearly. Search the visible brand or active ingredient below.");
       return;
     }
 
@@ -157,9 +159,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
       const dataUrl = captureFrame(video, canvas);
       if (!dataUrl) return;
 
-      const { brand, generic } = await scanImage(dataUrl);
+      const { brand, generic, ocrError } = await scanImage(dataUrl);
       if ((isKnownMedicationText(brand) || isKnownMedicationText(generic)) && stateRef.current === "streaming") {
-        await presentScanResult(dataUrl, brand, generic);
+        await presentScanResult(dataUrl, brand, generic, ocrError);
       }
     } catch {
       // Keep the stream running. Manual capture remains available.
@@ -223,8 +225,8 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
       updateState("processing");
       setCapturedImage(dataUrl);
       stopCamera();
-      const { brand, generic } = await scanImage(dataUrl);
-      await presentScanResult(dataUrl, brand, generic);
+      const { brand, generic, ocrError } = await scanImage(dataUrl);
+      await presentScanResult(dataUrl, brand, generic, ocrError);
     } catch {
       updateState("error");
       setErrorMsg("Failed to identify the medication. Try capturing the label more clearly.");
