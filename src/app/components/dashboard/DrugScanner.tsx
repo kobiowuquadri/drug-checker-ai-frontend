@@ -8,6 +8,12 @@ import { api } from "@/lib/api";
 import { Drug } from "@/lib/types";
 
 type ScanState = "idle" | "loading-camera" | "streaming" | "processing" | "result" | "error";
+type ScanDetection = {
+  brand: string;
+  generic: string;
+  ocrError?: string;
+  ocrText?: string;
+};
 
 interface DrugScannerProps {
   isOpen: boolean;
@@ -15,15 +21,133 @@ interface DrugScannerProps {
   onDrugDetected: (drug: Drug) => void;
 }
 
-async function scanImage(dataUrl: string) {
+const LABEL_PRODUCTS = [
+  {
+    pattern: /\b(?:acycor|acylor)\s*plus\b/i,
+    brand: "Acylor Plus",
+    generic: "Aceclofenac + Paracetamol",
+  },
+  {
+    pattern: /\baceclofenac\s*(?:&|and|\+)\s*paracetamol\b/i,
+    brand: "Acylor Plus",
+    generic: "Aceclofenac + Paracetamol",
+  },
+  {
+    pattern: /\bferoglobin(?:\s*b12)?\b/i,
+    brand: "Feroglobin B12",
+    generic: "Ferrous Sulfate + Folic Acid + Vitamin B12",
+  },
+  {
+    pattern: /\bsynriam\b/i,
+    brand: "Synriam",
+    generic: "Arterolane + Piperaquine",
+  },
+  {
+    pattern: /\b(?:coartem|lonart|amatem|lokmal|lumartem)\b/i,
+    brand: "Artemether Lumefantrine",
+    generic: "Artemether + Lumefantrine",
+  },
+  {
+    pattern: /\bampiclox\b/i,
+    brand: "Ampiclox",
+    generic: "Ampicillin + Cloxacillin",
+  },
+  {
+    pattern: /\bseptrin\b/i,
+    brand: "Septrin",
+    generic: "Trimethoprim-Sulfamethoxazole",
+  },
+  {
+    pattern: /\b(?:panadol|emzor paracetamol|calpol)\b/i,
+    brand: "Paracetamol product",
+    generic: "Paracetamol",
+  },
+];
+
+function detectMedicationFromLabelText(text: string): ScanDetection | null {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+
+  const product = LABEL_PRODUCTS.find((item) => item.pattern.test(normalized));
+  if (product) {
+    return {
+      brand: product.brand,
+      generic: product.generic,
+      ocrText: text,
+    };
+  }
+
+  return null;
+}
+
+function extractSearchableLabelText(text = "") {
+  const dosageWords = /\b(tablets?|capsules?|caplets?|syrups?|suspension|cream|ointment|injection|injectable|drops?|solution|oral|film coated|mg|ml|iu|bp|usp|ph\.?e?ur)\b/gi;
+
+  return text
+    .split(/\r?\n/)
+    .map((line) =>
+      line
+        .replace(dosageWords, " ")
+        .replace(/\b\d+(?:\.\d+)?\b/g, " ")
+        .replace(/[^a-zA-Z0-9&+ -]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    )
+    .filter((line) => /[a-zA-Z]{4,}/.test(line) && line.length <= 60)
+    .sort((a, b) => a.split(" ").length - b.split(" ").length || b.length - a.length)[0] || "";
+}
+
+async function extractTextWithFreeOcr(dataUrl: string) {
+  const tesseract = await import("tesseract.js");
+  const result = await tesseract.recognize(dataUrl, "eng", {
+    logger: () => undefined,
+  });
+
+  return result.data.text.trim();
+}
+
+async function scanImage(dataUrl: string): Promise<ScanDetection> {
   const base64 = dataUrl.split(",")[1];
   const response = await api.drugs.scan({ image: base64, mimeType: "image/jpeg" });
-
-  return {
+  const backendDetection = {
     brand: response.data.medicationName?.trim() || "UNKNOWN",
     generic: response.data.genericName?.trim() || "UNKNOWN",
     ocrError: response.data.ocrError,
+    ocrText: response.data.ocrText,
   };
+
+  if (isKnownMedicationText(backendDetection.brand) || isKnownMedicationText(backendDetection.generic)) {
+    return backendDetection;
+  }
+
+  try {
+    const freeOcrText = await extractTextWithFreeOcr(dataUrl);
+    const localDetection = detectMedicationFromLabelText(freeOcrText);
+
+    if (localDetection) {
+      return {
+        ...localDetection,
+        ocrError: backendDetection.ocrError,
+      };
+    }
+
+    const searchableLabelText = extractSearchableLabelText(freeOcrText);
+    if (searchableLabelText) {
+      return {
+        brand: searchableLabelText,
+        generic: "UNKNOWN",
+        ocrError: backendDetection.ocrError,
+        ocrText: freeOcrText,
+      };
+    }
+
+    return {
+      ...backendDetection,
+      ocrText: freeOcrText || backendDetection.ocrText,
+    };
+  } catch {
+    return backendDetection;
+  }
 }
 
 function isKnownMedicationText(value: string) {
@@ -119,7 +243,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
     setIsManualSearching(false);
   }, []);
 
-  const presentScanResult = useCallback(async (dataUrl: string, brand: string, generic: string, ocrError?: string) => {
+  const presentScanResult = useCallback(async (dataUrl: string, brand: string, generic: string, ocrError?: string, ocrText?: string) => {
     clearAutoScan();
     stopCamera();
     updateState("processing");
@@ -130,7 +254,13 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
 
     if (!brandKnown && !genericKnown) {
       updateState("error");
-      setErrorMsg(ocrError || "The scanner could not read the medication name clearly. Search the visible brand or active ingredient below.");
+      const fallbackQuery = extractSearchableLabelText(ocrText);
+      if (fallbackQuery) setManualQuery(fallbackQuery);
+      setErrorMsg(
+        fallbackQuery
+          ? "The free OCR read some label text. Review or edit the search below to find the medication."
+          : ocrError || "The scanner could not read the medication name clearly. Search the visible brand or active ingredient below."
+      );
       return;
     }
 
@@ -159,9 +289,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
       const dataUrl = captureFrame(video, canvas);
       if (!dataUrl) return;
 
-      const { brand, generic, ocrError } = await scanImage(dataUrl);
+      const { brand, generic, ocrError, ocrText } = await scanImage(dataUrl);
       if ((isKnownMedicationText(brand) || isKnownMedicationText(generic)) && stateRef.current === "streaming") {
-        await presentScanResult(dataUrl, brand, generic, ocrError);
+        await presentScanResult(dataUrl, brand, generic, ocrError, ocrText);
       }
     } catch {
       // Keep the stream running. Manual capture remains available.
@@ -225,8 +355,8 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
       updateState("processing");
       setCapturedImage(dataUrl);
       stopCamera();
-      const { brand, generic, ocrError } = await scanImage(dataUrl);
-      await presentScanResult(dataUrl, brand, generic, ocrError);
+      const { brand, generic, ocrError, ocrText } = await scanImage(dataUrl);
+      await presentScanResult(dataUrl, brand, generic, ocrError, ocrText);
     } catch {
       updateState("error");
       setErrorMsg("Failed to identify the medication. Try capturing the label more clearly.");
