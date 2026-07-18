@@ -23,6 +23,16 @@ interface DrugScannerProps {
 
 const LABEL_PRODUCTS = [
   {
+    pattern: /\b(?:arte\s*quick|artequick|[a-z]{2,}\s+quick)\b|(?:artemisinin.*piperaquine|piperaquine.*artemisinin)/i,
+    brand: "Artequick",
+    generic: "Artemisinin + Piperaquine",
+  },
+  {
+    pattern: /\b(?:inbu(?:[-\s]?400)?|ibuprofen)\b/i,
+    brand: "Inbu-400",
+    generic: "Ibuprofen",
+  },
+  {
     pattern: /\b(?:acycor|acylor)\s*plus\b/i,
     brand: "Acylor Plus",
     generic: "Aceclofenac + Paracetamol",
@@ -115,8 +125,19 @@ async function scanImage(dataUrl: string): Promise<ScanDetection> {
     ocrError: response.data.ocrError,
     ocrText: response.data.ocrText,
   };
+  const knownBackendDetection = detectMedicationFromLabelText(
+    `${backendDetection.brand} ${backendDetection.generic} ${backendDetection.ocrText || ""}`
+  );
 
-  if (isKnownMedicationText(backendDetection.brand) || isKnownMedicationText(backendDetection.generic)) {
+  if (knownBackendDetection) {
+    return {
+      ...knownBackendDetection,
+      ocrError: backendDetection.ocrError,
+      ocrText: backendDetection.ocrText,
+    };
+  }
+
+  if (isKnownMedicationText(backendDetection.generic)) {
     return backendDetection;
   }
 
