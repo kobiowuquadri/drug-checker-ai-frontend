@@ -64,6 +64,9 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
   const [detectedGeneric, setDetectedGeneric] = useState("");
   const [searchResults, setSearchResults] = useState<Drug[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const [manualQuery, setManualQuery] = useState("");
+  const [manualResults, setManualResults] = useState<Drug[]>([]);
+  const [isManualSearching, setIsManualSearching] = useState(false);
 
   const updateState = useCallback((next: ScanState) => {
     stateRef.current = next;
@@ -85,6 +88,9 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
     setDetectedGeneric("");
     setSearchResults([]);
     setErrorMsg("");
+    setManualQuery("");
+    setManualResults([]);
+    setIsManualSearching(false);
   }, []);
 
   const handleBarcodeFound = useCallback(async (rawValue: string, format: string) => {
@@ -184,6 +190,27 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
     toast.success(`${drug.name} added to workspace`, { description: "From barcode scan" });
     onClose();
   }, [onClose, onDrugDetected, stopEverything]);
+
+  const runManualSearch = useCallback(async () => {
+    const term = manualQuery.trim();
+    if (term.length < 2) {
+      setErrorMsg("Enter at least 2 characters from the brand or generic ingredient.");
+      return;
+    }
+
+    setIsManualSearching(true);
+    try {
+      const response = await api.drugs.search(term);
+      setManualResults(response.data.drugs.slice(0, 8));
+      if (response.data.drugs.length === 0) {
+        setErrorMsg("No medication matched that text. Try the generic active ingredient printed on the pack.");
+      }
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : "Medication search failed.");
+    } finally {
+      setIsManualSearching(false);
+    }
+  }, [manualQuery]);
 
   const handleUseCamera = useCallback(() => {
     stopEverything();
@@ -338,6 +365,53 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
                   <p className="mt-1 text-xs font-medium leading-5 text-text-secondary">
                     Many Nigerian medication barcodes are not available in public drug databases. Use Camera scan or type the generic ingredient from the pack.
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(scanState === "not-found" || scanState === "error" || scanState === "unsupported" || (scanState === "result" && searchResults.length === 0)) && (
+            <div className="mb-4 rounded-[24px] border border-border-app bg-surface-app p-4">
+              <label className="text-xs font-black uppercase tracking-wide text-text-muted">Type brand or generic name</label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={manualQuery}
+                  onChange={(event) => setManualQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void runManualSearch();
+                    }
+                  }}
+                  placeholder="e.g. ibuprofen, artemisinin, paracetamol"
+                  className="min-w-0 flex-1 rounded-2xl border border-border-app bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary-blue"
+                />
+                <Button type="button" onClick={runManualSearch} disabled={isManualSearching} className="px-4 py-3">
+                  {isManualSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                </Button>
+              </div>
+
+              {manualResults.length > 0 && (
+                <div className="mt-3 max-h-44 space-y-2 overflow-y-auto">
+                  {manualResults.map((drug) => (
+                    <button
+                      key={drug.rxcui}
+                      type="button"
+                      onClick={() => handleSelect(drug)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-border-app bg-white px-4 py-3 text-left transition hover:border-primary-blue/40 hover:bg-primary-blue/5"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-blue/10 text-primary-blue">
+                        <Pill className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-black text-text-primary">{drug.name}</span>
+                        {drug.aliases && drug.aliases.length > 0 && (
+                          <span className="block truncate text-xs font-medium text-text-muted">{drug.aliases.slice(0, 3).join(", ")}</span>
+                        )}
+                      </span>
+                      <Check className="h-4 w-4 shrink-0 text-primary-blue" />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
