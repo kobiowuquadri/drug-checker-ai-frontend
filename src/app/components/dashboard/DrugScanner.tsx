@@ -443,6 +443,9 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-blue">Camera scan</p>
             <h3 className="text-lg font-black text-text-primary">Scan medication label</h3>
+            <p className="mt-1 max-w-sm text-xs font-semibold leading-5 text-text-secondary">
+              Best effort OCR. If the scan is wrong, type the generic ingredient name from the pack.
+            </p>
           </div>
           <button onClick={handleClose} className="rounded-2xl border border-border-app p-2 text-text-muted hover:bg-surface-app" aria-label="Close scanner">
             <X className="h-5 w-5" />
@@ -494,7 +497,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
         <div className="px-5 py-5">
           {scanState === "streaming" && (
             <p className="mb-4 rounded-2xl bg-primary-blue/5 px-4 py-3 text-xs font-semibold leading-5 text-text-secondary">
-              Auto-detect runs in the background. For best results, tap Capture when the label text is sharp and well lit.
+              Camera scan may misread stylized Nigerian medicine packs. For best results, capture sharp label text or type the generic name manually.
             </p>
           )}
 
@@ -540,7 +543,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
                 </div>
               ) : (
                 <div className="rounded-2xl bg-surface-app p-4 text-sm font-medium text-text-secondary">
-                  No database match for <strong>{detectedBrand || detectedGeneric}</strong>. Search manually by the generic ingredient.
+                  No database match for <strong>{detectedBrand || detectedGeneric}</strong>. Type the generic ingredient name from the label for better accuracy.
                 </div>
               )}
             </div>
@@ -552,7 +555,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
                 {errorMsg}
               </p>
               <div className="rounded-[24px] border border-border-app bg-surface-app p-4">
-                <label className="text-xs font-black uppercase tracking-wide text-text-muted">Search label text</label>
+                <label className="text-xs font-black uppercase tracking-wide text-text-muted">Type brand or generic name</label>
                 <div className="mt-2 flex gap-2">
                   <input
                     value={manualQuery}
@@ -563,7 +566,7 @@ export default function DrugScanner({ isOpen, onClose, onDrugDetected }: DrugSca
                         void runManualSearch();
                       }
                     }}
-                    placeholder="e.g. Synriam, Coartem, Panadol"
+                    placeholder="e.g. ibuprofen, artemisinin, paracetamol"
                     className="min-w-0 flex-1 rounded-2xl border border-border-app bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary-blue"
                   />
                   <Button type="button" onClick={runManualSearch} disabled={isManualSearching} className="px-4 py-3">

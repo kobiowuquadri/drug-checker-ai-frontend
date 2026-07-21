@@ -324,7 +324,7 @@ export default function DrugChecker() {
     <div onClick={handleClickOutside}>
       <DashboardHeader
         title="Medication safety workspace"
-        description="Search generic medication names, select up to 5 drugs, and check verified interaction records with AI explanations."
+        description="Type generic medication names when possible, select up to 5 drugs, and check verified interaction records with AI explanations."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -338,7 +338,7 @@ export default function DrugChecker() {
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-primary-blue">Search medication</p>
                 <h2 className="mt-1.5 text-2xl font-black text-text-primary">Find a medication</h2>
                 <p className="mt-1 text-sm font-medium text-text-secondary">
-                  Search by generic name or brand (Panadol to Paracetamol).
+                  Add drugs by typing the generic name for best accuracy. Brand names, camera scan, and barcode are best-effort helpers.
                 </p>
               </div>
 
@@ -346,7 +346,7 @@ export default function DrugChecker() {
               <div className="flex flex-wrap shrink-0 gap-2">
                 <button
                   onClick={() => setScannerOpen(true)}
-                  title="Scan medication label with camera"
+                  title="Best-effort camera OCR. If it misses, type the generic drug name."
                   className="flex items-center gap-1.5 rounded-2xl border border-primary-blue/30 bg-primary-blue/5 px-3 py-2 text-xs font-bold text-primary-blue transition hover:bg-primary-blue/10"
                 >
                   <Camera className="h-3.5 w-3.5" />
@@ -354,7 +354,7 @@ export default function DrugChecker() {
                 </button>
                 <button
                   onClick={() => setBarcodeScannerOpen(true)}
-                  title="Scan medication barcode"
+                  title="Best-effort barcode lookup. If it misses, type the generic drug name."
                   className="flex items-center gap-1.5 rounded-2xl border border-primary-blue/30 bg-primary-blue/5 px-3 py-2 text-xs font-bold text-primary-blue transition hover:bg-primary-blue/10"
                 >
                   <Barcode className="h-3.5 w-3.5" />
@@ -385,7 +385,7 @@ export default function DrugChecker() {
                 onChange={(e) => updateQuery(e.target.value)}
                 onFocus={() => query.trim().length >= 2 && setDropdownOpen(true)}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Search ibuprofen, aspirin, paracetamol..."
+                placeholder="Type generic name: ibuprofen, aspirin, paracetamol..."
                 autoComplete="off"
                 aria-label="Search medications"
                 aria-autocomplete="list"
@@ -458,7 +458,7 @@ export default function DrugChecker() {
                       <MedicalIllustration name={searchError ? "no-results" : "empty"} className="mx-auto h-24 w-32" />
                       <p className="mt-3 text-sm font-black text-text-primary">{searchError || "No medications found"}</p>
                       <p className="mt-1 text-xs font-medium text-text-muted">
-                        Try a different spelling or generic ingredient name.
+                        Try a different spelling, brand name, or the active generic ingredient printed on the pack.
                       </p>
                     </div>
                   )}

@@ -228,6 +228,9 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-blue">Barcode scan</p>
             <h3 className="text-lg font-black text-text-primary">Scan medication barcode</h3>
+            <p className="mt-1 max-w-sm text-xs font-semibold leading-5 text-text-secondary">
+              Barcode lookup is best effort. If it misses, use camera scan or type the generic name.
+            </p>
           </div>
           <button onClick={handleClose} className="rounded-2xl border border-border-app p-2 text-text-muted hover:bg-surface-app" aria-label="Close scanner">
             <X className="h-5 w-5" />
@@ -269,7 +272,7 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
               <p className="text-sm font-semibold text-white">
                 {scanState === "unsupported" ? "Barcode detection is not supported in this browser." : errorMsg}
               </p>
-              <p className="text-xs font-medium text-white/65">Camera label scan is usually better for Nigerian medication packs.</p>
+              <p className="text-xs font-medium text-white/65">Many local medicine barcodes are not indexed. Typing the generic name is often more accurate.</p>
             </div>
           )}
         </div>
@@ -333,7 +336,7 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
                 <div className="rounded-2xl border border-warning-orange/20 bg-warning-orange/5 p-4">
                   <p className="text-sm font-black text-text-primary">Barcode not found</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-text-secondary">
-                    Many Nigerian medication barcodes are not available in OpenFDA or RxNorm. Use Camera scan to read the brand and active ingredient from the label.
+                    Many Nigerian medication barcodes are not available in public drug databases. Use Camera scan or type the generic ingredient from the pack.
                   </p>
                 </div>
               )}
@@ -342,7 +345,7 @@ export default function BarcodeScanner({ isOpen, onClose, onDrugDetected, onUseC
 
           {scanState === "scanning" && (
             <p className="mb-4 rounded-2xl bg-primary-blue/5 px-4 py-3 text-xs font-semibold leading-5 text-text-secondary">
-              Barcode lookup is best effort. If it cannot find the product, switch to Camera scan and capture the label text.
+              Barcode lookup may not identify local products. If it cannot find the medicine, switch to Camera scan or type the generic ingredient name.
             </p>
           )}
 
